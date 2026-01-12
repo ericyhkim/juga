@@ -1,11 +1,12 @@
 module github.com/ericyhkim/juga
 
-go 1.21
+go 1.24.0
 
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/text v0.33.0
 )
 
 require (
