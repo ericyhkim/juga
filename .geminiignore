@@ -1,0 +1,19 @@
+# Version Control
+.git/
+
+# Binaries and build artifacts
+/juga
+*.exe
+bin/
+dist/
+*.test
+
+# OS Specific
+.DS_Store
+
+# Large or Auto-generated
+go.sum
+vendor/
+
+# direnv
+.envrc
