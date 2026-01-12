@@ -46,11 +46,17 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 		if err != nil {
 			return
 		}
-		body, err := io.ReadAll(resp.Body)
+		rawBody, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			return
 		}
+
+		decodedBody, err := DecodeEUCKR(rawBody)
+		if err != nil {
+			return
+		}
+		body := []byte(decodedBody)
 
 		matches := s.re.FindAllSubmatch(body, -1)
 		mu.Lock()
@@ -79,11 +85,17 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 				break
 			}
 
-			body, err := io.ReadAll(resp.Body)
+			rawBody, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
 				break
 			}
+
+			decodedBody, err := DecodeEUCKR(rawBody)
+			if err != nil {
+				break
+			}
+			body := []byte(decodedBody)
 
 			matches := s.re.FindAllSubmatch(body, -1)
 			if len(matches) == 0 {
