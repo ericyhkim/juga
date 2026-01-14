@@ -143,7 +143,7 @@ Example:
 }
 
 func Execute() {
-	if err := config.EnsureConfigDir(); err != nil {
+	if err := config.EnsureAppDirs(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating config directory: %v\n", err)
 		os.Exit(1)
 	}

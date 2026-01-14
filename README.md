@@ -59,12 +59,14 @@ go install ./cmd/juga
 # 1. Remove the binary (check both common locations)
 rm $(go env GOPATH)/bin/juga || sudo rm /usr/local/bin/juga
 
-# 2. Remove configuration and ticker database
-rm -rf ~/.juga
+# 2. Remove configuration and data (XDG Standard)
+rm -rf ~/.config/juga ~/.local/share/juga ~/.cache/juga
 ```
 
 **Windows:**
-Delete the `juga.exe` file from your GOPATH and the `.juga` folder from your user directory (`%USERPROFILE%`).
+Delete `juga.exe` and the following directories:
+- `%APPDATA%\juga` (Config)
+- `%LOCALAPPDATA%\juga` (Data & Cache)
 
 ## 🏎️ Quick Start
 ```bash
@@ -110,11 +112,17 @@ juga my-tech
 - **Fuzzy Matching:** `sahilm/fuzzy`
 - **Data Source:** Naver Finance Real-time Polling API (JSON).
 
-## 📂 .dotfiles
-- **`~/.juga/aliases.json`**: Your private mapping of nicknames to 6-digit codes.
-- **`~/.juga/portfolios.json`**: Your private collections of stock groups.
-- **`~/.juga/master_tickers.csv`**: A library of ~3,600 stocks. Automatically initialized from embedded data.
-> **Note:** On Windows, `~` refers to `%USERPROFILE%`.
+## 📂 Files & Configuration
+`juga` follows the **XDG Base Directory Specification**:
+
+| File | Type | Default Location (Linux/macOS) | Env Override |
+| :--- | :--- | :--- | :--- |
+| `aliases.json` | Config | `~/.config/juga/aliases.json` | `JUGA_CONFIG_HOME` |
+| `portfolios.json` | Config | `~/.config/juga/portfolios.json` | `JUGA_CONFIG_HOME` |
+| `master_tickers.csv` | Data | `~/.local/share/juga/master_tickers.csv` | `JUGA_DATA_HOME` |
+| `cache.json` | Cache | `~/.cache/juga/cache.json` | `JUGA_CACHE_HOME` |
+
+> **Note:** On Windows, these default to `%APPDATA%\juga` (Config) and `%LOCALAPPDATA%\juga` (Data/Cache).
 
 - **Resolver Logic**:
   1. Check if the input is a **Portfolio** (expands to list of items).
