@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,8 +12,9 @@ import (
 )
 
 const (
-	kospiURL  = "https://finance.naver.com/sise/sise_market_sum.naver?sosok=0&page=%d"
-	kosdaqURL = "https://finance.naver.com/sise/sise_market_sum.naver?sosok=1&page=%d"
+	kospiURL        = "https://finance.naver.com/sise/sise_market_sum.naver?sosok=0&page=%d"
+	kosdaqURL       = "https://finance.naver.com/sise/sise_market_sum.naver?sosok=1&page=%d"
+	etfAPIURL       = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=0&targetColumn=market_sum&sortOrder=desc"
 	defaultMaxPages = 40 // Fallback if detection fails
 )
 
@@ -26,9 +28,18 @@ type Scraper struct {
 func NewScraper() *Scraper {
 	return &Scraper{
 		client: &http.Client{Timeout: 10 * time.Second},
-		re:     regexp.MustCompile(`href="/item/main.naver\?code=(\d+)" class="tltle">([^<]+)</a>`),
+		re:     regexp.MustCompile(`href="/item/main.naver\?code=([A-Z0-9]+)" class="tltle">([^<]+)</a>`),
 		pgRe:   regexp.MustCompile(`class="pgRR">\s*<a href=".*?page=(\d+)`),
 	}
+}
+
+type etfResponse struct {
+	Result struct {
+		EtfItemList []struct {
+			ItemCode string `json:"itemcode"`
+			ItemName string `json:"itemname"`
+		} `json:"etfItemList"`
+	} `json:"result"`
 }
 
 func (s *Scraper) ScrapeAll() ([]Ticker, error) {
@@ -114,9 +125,45 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 		}
 	}
 
-	wg.Add(2)
+	scrapeETF := func() {
+		defer wg.Done()
+
+		resp, err := s.client.Get(etfAPIURL)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+
+		rawBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return
+		}
+
+		decodedBody, err := DecodeEUCKR(rawBody)
+		if err != nil {
+			return
+		}
+
+		var result etfResponse
+		if err := json.Unmarshal([]byte(decodedBody), &result); err != nil {
+			return
+		}
+
+		mu.Lock()
+		for _, item := range result.Result.EtfItemList {
+			tickers = append(tickers, Ticker{
+				Code:   item.ItemCode,
+				Name:   item.ItemName,
+				Market: "KOSPI", // Most ETFs are listed on KOSPI
+			})
+		}
+		mu.Unlock()
+	}
+
+	wg.Add(3)
 	go scrapeMarket(kospiURL, "KOSPI")
 	go scrapeMarket(kosdaqURL, "KOSDAQ")
+	go scrapeETF()
 
 	wg.Wait()
 
@@ -124,5 +171,14 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 		return nil, fmt.Errorf("scraped 0 tickers; network or parsing error likely")
 	}
 
-	return tickers, nil
+	unique := make([]Ticker, 0, len(tickers))
+	seen := make(map[string]bool)
+	for _, t := range tickers {
+		if !seen[t.Code] {
+			seen[t.Code] = true
+			unique = append(unique, t)
+		}
+	}
+
+	return unique, nil
 }
