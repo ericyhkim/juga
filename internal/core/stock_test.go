@@ -64,3 +64,24 @@ func TestParsePrice(t *testing.T) {
 		}
 	}
 }
+
+func TestIsValidCode(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"005930", true},
+		{"0117V0", true},
+		{"ABCDEF", true},
+		{"12345", false},
+		{"1234567", false},
+		{"123 45", false},
+		{"!@#$%^", false},
+	}
+
+	for _, test := range tests {
+		if res := IsValidCode(test.input); res != test.expected {
+			t.Errorf("IsValidCode(%q) = %v; want %v", test.input, res, test.expected)
+		}
+	}
+}
