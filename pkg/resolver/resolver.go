@@ -5,23 +5,22 @@ import (
 
 	"github.com/ericyhkim/juga/pkg/models"
 	"github.com/ericyhkim/juga/pkg/search"
-	"github.com/ericyhkim/juga/pkg/storage"
 )
 
 // Resolver orchestrates the lookup of stock codes from various sources.
 type Resolver struct {
-	portfolios *storage.PortfolioRepository
-	aliases    *storage.AliasRepository
-	cache      *storage.CacheRepository
-	tickers    *storage.TickerRepository
+	portfolios PortfolioProvider
+	aliases    AliasProvider
+	cache      CacheProvider
+	tickers    TickerProvider
 }
 
 // NewResolver creates a new resolver instance with the provided repositories.
 func NewResolver(
-	p *storage.PortfolioRepository,
-	a *storage.AliasRepository,
-	c *storage.CacheRepository,
-	t *storage.TickerRepository,
+	p PortfolioProvider,
+	a AliasProvider,
+	c CacheProvider,
+	t TickerProvider,
 ) *Resolver {
 	return &Resolver{
 		portfolios: p,
