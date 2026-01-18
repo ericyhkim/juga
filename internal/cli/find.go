@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ericyhkim/juga/internal/core"
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/search"
+	"github.com/ericyhkim/juga/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -35,13 +36,13 @@ Example:
 
 		query := args[0]
 
-		repo := core.NewTickerRepository()
+		repo := storage.NewTickerRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading ticker database: %v\n", err)
 			os.Exit(1)
 		}
 
-		results := core.FindTickers(repo.GetAll(), query)
+		results := search.FindTickers(repo.GetAll(), query)
 
 		if len(results) == 0 {
 			fmt.Printf("No matches found for '%s'.\n", query)

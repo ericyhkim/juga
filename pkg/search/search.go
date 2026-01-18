@@ -1,12 +1,13 @@
-package core
+package search
 
 import (
 	"sort"
 
+	"github.com/ericyhkim/juga/pkg/models"
 	"github.com/sahilm/fuzzy"
 )
 
-type TickerSource []Ticker
+type TickerSource []models.Ticker
 
 func (t TickerSource) String(i int) string {
 	return t[i].Name
@@ -16,7 +17,7 @@ func (t TickerSource) Len() int {
 	return len(t)
 }
 
-func FindTickers(tickers []Ticker, query string) []Ticker {
+func FindTickers(tickers []models.Ticker, query string) []models.Ticker {
 	if query == "" {
 		return nil
 	}
@@ -26,7 +27,7 @@ func FindTickers(tickers []Ticker, query string) []Ticker {
 
 	sort.Sort(matches)
 
-	var results []Ticker
+	var results []models.Ticker
 	for _, match := range matches {
 		results = append(results, tickers[match.Index])
 	}

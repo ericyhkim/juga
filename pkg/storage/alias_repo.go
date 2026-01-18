@@ -1,11 +1,11 @@
-package core
+package storage
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
-	"github.com/ericyhkim/juga/internal/config"
+	"github.com/ericyhkim/juga/pkg/config"
 )
 
 type AliasRepository struct {

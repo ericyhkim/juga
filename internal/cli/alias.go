@@ -6,9 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ericyhkim/juga/internal/core"
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/models"
+	"github.com/ericyhkim/juga/pkg/search"
+	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -48,7 +50,7 @@ The target can be a 6-digit code or a stock name (which will be auto-resolved).`
 		nick := args[0]
 		target := args[1]
 
-		aliasRepo := core.NewAliasRepository()
+		aliasRepo := storage.NewAliasRepository()
 		if err := aliasRepo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)
@@ -57,18 +59,18 @@ The target can be a 6-digit code or a stock name (which will be auto-resolved).`
 		code := target
 		resolutionSource := "code"
 
-		if !core.IsValidCode(target) {
+		if !models.IsValidCode(target) {
 			if resolved := aliasRepo.Resolve(target); resolved != "" {
 				code = resolved
 				resolutionSource = fmt.Sprintf("existing alias '%s'", target)
 			} else {
-				tickerRepo := core.NewTickerRepository()
+				tickerRepo := storage.NewTickerRepository()
 				if err := tickerRepo.Load(); err != nil {
 					fmt.Fprintf(os.Stderr, "Error loading tickers: %v\n", err)
 					os.Exit(1)
 				}
 
-				results := core.FindTickers(tickerRepo.GetAll(), target)
+				results := search.FindTickers(tickerRepo.GetAll(), target)
 				if len(results) == 0 {
 					fmt.Printf("Could not resolve '%s' to any stock.\n", target)
 					return
@@ -113,7 +115,7 @@ var aliasRemoveCmd = &cobra.Command{
 
 		nick := args[0]
 
-		repo := core.NewAliasRepository()
+		repo := storage.NewAliasRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)
@@ -138,7 +140,7 @@ var aliasListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all registered aliases",
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := core.NewAliasRepository()
+		repo := storage.NewAliasRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)
@@ -176,7 +178,7 @@ var aliasEditCmd = &cobra.Command{
 	Long: `Opens all your aliases in the default editor ($EDITOR or nano/vi).
 Modify the mappings in 'nickname: code' format. Lines starting with # are ignored.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := core.NewAliasRepository()
+		repo := storage.NewAliasRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)

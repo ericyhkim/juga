@@ -1,4 +1,4 @@
-package core
+package naver
 
 import (
 	"encoding/json"
@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
 const (
@@ -42,9 +44,9 @@ type etfResponse struct {
 	} `json:"result"`
 }
 
-func (s *Scraper) ScrapeAll() ([]Ticker, error) {
+func (s *Scraper) ScrapeAll() ([]models.Ticker, error) {
 	var (
-		tickers []Ticker
+		tickers []models.Ticker
 		mu      sync.Mutex
 		wg      sync.WaitGroup
 	)
@@ -72,7 +74,7 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 		matches := s.re.FindAllSubmatch(body, -1)
 		mu.Lock()
 		for _, m := range matches {
-			tickers = append(tickers, Ticker{
+			tickers = append(tickers, models.Ticker{
 				Code:   string(m[1]),
 				Name:   string(m[2]),
 				Market: marketName,
@@ -115,7 +117,7 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 
 			mu.Lock()
 			for _, m := range matches {
-				tickers = append(tickers, Ticker{
+				tickers = append(tickers, models.Ticker{
 					Code:   string(m[1]),
 					Name:   string(m[2]),
 					Market: marketName,
@@ -151,7 +153,7 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 
 		mu.Lock()
 		for _, item := range result.Result.EtfItemList {
-			tickers = append(tickers, Ticker{
+			tickers = append(tickers, models.Ticker{
 				Code:   item.ItemCode,
 				Name:   item.ItemName,
 				Market: "KOSPI", // Most ETFs are listed on KOSPI
@@ -171,7 +173,7 @@ func (s *Scraper) ScrapeAll() ([]Ticker, error) {
 		return nil, fmt.Errorf("scraped 0 tickers; network or parsing error likely")
 	}
 
-	unique := make([]Ticker, 0, len(tickers))
+	unique := make([]models.Ticker, 0, len(tickers))
 	seen := make(map[string]bool)
 	for _, t := range tickers {
 		if !seen[t.Code] {

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ericyhkim/juga/internal/core"
+	"github.com/ericyhkim/juga/pkg/models"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
-func RenderIndices(indices []core.Stock) string {
+func RenderIndices(indices []models.Stock) string {
 	if len(indices) == 0 {
 		return ""
 	}
@@ -40,7 +40,7 @@ func RenderIndices(indices []core.Stock) string {
 	return strings.Join(parts, "   |   ")
 }
 
-func RenderMarketDetails(indices []core.Stock) string {
+func RenderMarketDetails(indices []models.Stock) string {
 	if len(indices) == 0 {
 		return ""
 	}
@@ -88,7 +88,7 @@ func formatLargeValue(v float64) string {
 	return fmt.Sprintf("%.1fM", v)
 }
 
-func RenderStockTable(stocks []core.Stock) string {
+func RenderStockTable(stocks []models.Stock) string {
 	if len(stocks) == 0 {
 		return ""
 	}
@@ -170,7 +170,7 @@ func formatNumber(n float64) string {
 	return res.String()
 }
 
-func getDirectionSymbol(s core.Stock) string {
+func getDirectionSymbol(s models.Stock) string {
 	if s.IsRising {
 		return "▲"
 	}

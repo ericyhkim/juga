@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ericyhkim/juga/internal/config"
-	"github.com/ericyhkim/juga/internal/core"
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/config"
+	"github.com/ericyhkim/juga/pkg/models"
+	"github.com/ericyhkim/juga/pkg/naver"
+	"github.com/ericyhkim/juga/pkg/search"
+	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -46,7 +49,7 @@ Example:
 			return
 		}
 
-		portRepo := core.NewPortfolioRepository()
+		portRepo := storage.NewPortfolioRepository()
 		if err := portRepo.Load(); err != nil {
 			// Non-critical, continue without portfolios
 		}
@@ -68,17 +71,17 @@ Example:
 			expandedArgs = expandedArgs[:MaxStocks]
 		}
 
-		aliasRepo := core.NewAliasRepository()
+		aliasRepo := storage.NewAliasRepository()
 		if err := aliasRepo.Load(); err != nil {
 			// Non-critical
 		}
 
-		cacheRepo := core.NewCacheRepository()
+		cacheRepo := storage.NewCacheRepository()
 		if err := cacheRepo.Load(); err != nil {
 			// Non-critical
 		}
 
-		tickerRepo := core.NewTickerRepository()
+		tickerRepo := storage.NewTickerRepository()
 		tickerLoaded := false
 
 		var targetCodes []string
@@ -89,7 +92,7 @@ Example:
 
 			if resolved := aliasRepo.Resolve(arg); resolved != "" {
 				code = resolved
-			} else if core.IsValidCode(arg) {
+			} else if models.IsValidCode(arg) {
 				code = arg
 			} else if cached, ok := cacheRepo.Get(arg); ok {
 				code = cached
@@ -102,7 +105,7 @@ Example:
 					tickerLoaded = true
 				}
 
-				results := core.FindTickers(tickerRepo.GetAll(), arg)
+				results := search.FindTickers(tickerRepo.GetAll(), arg)
 				if len(results) > 0 {
 					code = results[0].Code
 					cacheRepo.Set(arg, code)
@@ -126,7 +129,7 @@ Example:
 			return
 		}
 
-		client := core.NewClient()
+		client := naver.NewClient()
 		stockResult, stockErr := client.FetchStocks(targetCodes)
 
 		if stockErr != nil {

@@ -1,4 +1,4 @@
-package core
+package storage
 
 import (
 	"bytes"
@@ -8,19 +8,20 @@ import (
 	"os"
 	"time"
 
-	"github.com/ericyhkim/juga/internal/config"
+	"github.com/ericyhkim/juga/pkg/config"
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
 //go:embed master_tickers.csv
 var defaultTickersCSV []byte
 
 type TickerRepository struct {
-	tickers []Ticker
+	tickers []models.Ticker
 }
 
 func NewTickerRepository() *TickerRepository {
 	return &TickerRepository{
-		tickers: []Ticker{},
+		tickers: []models.Ticker{},
 	}
 }
 
@@ -73,12 +74,12 @@ func (r *TickerRepository) Load() error {
 		return fmt.Errorf("failed to parse tickers CSV: %w", err)
 	}
 
-	var loaded []Ticker
+	var loaded []models.Ticker
 	for _, record := range records {
 		if len(record) < 3 {
 			continue
 		}
-		loaded = append(loaded, Ticker{
+		loaded = append(loaded, models.Ticker{
 			Code:   record[0],
 			Name:   record[1],
 			Market: record[2],
@@ -90,12 +91,12 @@ func (r *TickerRepository) Load() error {
 		reader := csv.NewReader(bytes.NewReader(defaultTickersCSV))
 		embeddedRecords, err := reader.ReadAll()
 		if err == nil {
-			var embeddedLoaded []Ticker
+			var embeddedLoaded []models.Ticker
 			for _, record := range embeddedRecords {
 				if len(record) < 3 {
 					continue
 				}
-				embeddedLoaded = append(embeddedLoaded, Ticker{
+				embeddedLoaded = append(embeddedLoaded, models.Ticker{
 					Code:   record[0],
 					Name:   record[1],
 					Market: record[2],
@@ -115,7 +116,7 @@ func (r *TickerRepository) Load() error {
 	return nil
 }
 
-func (r *TickerRepository) Save(tickers []Ticker) error {
+func (r *TickerRepository) Save(tickers []models.Ticker) error {
 	path, err := config.GetMasterTickersPath()
 	if err != nil {
 		return err
@@ -140,7 +141,7 @@ func (r *TickerRepository) Save(tickers []Ticker) error {
 	return nil
 }
 
-func (r *TickerRepository) GetAll() []Ticker {
+func (r *TickerRepository) GetAll() []models.Ticker {
 	return r.tickers
 }
 

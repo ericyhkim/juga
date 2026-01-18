@@ -1,10 +1,10 @@
-package core
+package storage
 
 import (
 	"encoding/json"
 	"os"
 
-	"github.com/ericyhkim/juga/internal/config"
+	"github.com/ericyhkim/juga/pkg/config"
 )
 
 const MaxCacheSize = 100

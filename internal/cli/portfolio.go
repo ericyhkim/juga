@@ -6,11 +6,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ericyhkim/juga/internal/core"
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/storage"
+
 	"github.com/spf13/cobra"
 )
+
+		
+
+	
 
 var portfolioCmd = &cobra.Command{
 	Use:     "portfolio",
@@ -48,7 +53,7 @@ The stocks can be provided as names, codes, or existing aliases.`,
 		name := args[0]
 		items := args[1:]
 
-		repo := core.NewPortfolioRepository()
+		repo := storage.NewPortfolioRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
 			os.Exit(1)
@@ -86,7 +91,7 @@ Add or remove stocks line by line. Lines starting with # are ignored.`,
 
 		name := args[0]
 
-		repo := core.NewPortfolioRepository()
+		repo := storage.NewPortfolioRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
 			os.Exit(1)
@@ -151,7 +156,7 @@ var portRemoveCmd = &cobra.Command{
 
 		name := args[0]
 
-		repo := core.NewPortfolioRepository()
+		repo := storage.NewPortfolioRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
 			os.Exit(1)
@@ -176,7 +181,7 @@ var portListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all portfolios",
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := core.NewPortfolioRepository()
+		repo := storage.NewPortfolioRepository()
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
 			os.Exit(1)

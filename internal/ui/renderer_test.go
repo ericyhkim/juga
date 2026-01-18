@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ericyhkim/juga/internal/core"
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
 func TestRenderStockTable(t *testing.T) {
-	stocks := []core.Stock{
+	stocks := []models.Stock{
 		{
 			Name:          "Samsung",
 			Price:         75000,
@@ -51,7 +51,7 @@ func TestRenderStockTable(t *testing.T) {
 }
 
 func TestRenderMarketDetails(t *testing.T) {
-	indices := []core.Stock{
+	indices := []models.Stock{
 		{
 			Name:          "KOSPI",
 			Price:         2586.32,
@@ -96,7 +96,7 @@ func TestFormatLargeValue(t *testing.T) {
 }
 
 func TestRenderIndices(t *testing.T) {
-	indices := []core.Stock{
+	indices := []models.Stock{
 		{
 			Name:          "KOSPI",
 			Price:         2586.32,

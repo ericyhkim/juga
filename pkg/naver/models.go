@@ -1,4 +1,4 @@
-package core
+package naver
 
 // NaverResponse represents the top-level structure of the Naver Finance polling API.
 type NaverResponse struct {

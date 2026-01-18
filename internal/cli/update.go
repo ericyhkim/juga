@@ -5,7 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ericyhkim/juga/internal/core"
+	"github.com/ericyhkim/juga/pkg/naver"
+	"github.com/ericyhkim/juga/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -19,14 +20,14 @@ Process takes about 10-20 seconds.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Updating ticker database... (this may take a moment)")
 
-		scraper := core.NewScraper()
+		scraper := naver.NewScraper()
 		tickers, err := scraper.ScrapeAll()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error scraping data: %v\n", err)
 			os.Exit(1)
 		}
 
-		repo := core.NewTickerRepository()
+		repo := storage.NewTickerRepository()
 		if err := repo.Load(); err != nil {
 		}
 
