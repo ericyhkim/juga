@@ -14,7 +14,7 @@ It’s a simple terminal tool letting you check KOSPI/KOSDAQ market data instant
 ## 📥 Installation
 
 ### Option 1: Go Install (Recommended)
-Developed with [Go 1.25](https://go.dev/dl/), but should work with version 1.21+.
+Developed with [Go 1.25](https://go.dev/dl/).
 
 **macOS / Linux:**
 ```bash
