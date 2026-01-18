@@ -8,8 +8,8 @@ import (
 
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
-	"github.com/ericyhkim/juga/pkg/models"
-	"github.com/ericyhkim/juga/pkg/search"
+	"github.com/ericyhkim/juga/pkg/config"
+	"github.com/ericyhkim/juga/pkg/resolver"
 	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
@@ -56,41 +56,38 @@ The target can be a 6-digit code or a stock name (which will be auto-resolved).`
 			os.Exit(1)
 		}
 
-		code := target
-		resolutionSource := "code"
-
-		if !models.IsValidCode(target) {
-			if resolved := aliasRepo.Resolve(target); resolved != "" {
-				code = resolved
-				resolutionSource = fmt.Sprintf("existing alias '%s'", target)
-			} else {
-				tickerRepo := storage.NewTickerRepository()
-				if err := tickerRepo.Load(); err != nil {
-					fmt.Fprintf(os.Stderr, "Error loading tickers: %v\n", err)
-					os.Exit(1)
-				}
-
-				results := search.FindTickers(tickerRepo.GetAll(), target)
-				if len(results) == 0 {
-					fmt.Printf("Could not resolve '%s' to any stock.\n", target)
-					return
-				}
-
-				best := results[0]
-				code = best.Code
-				resolutionSource = fmt.Sprintf("stock name '%s' (%s)", best.Name, best.Code)
-			}
+		portRepo := storage.NewPortfolioRepository()
+		if err := portRepo.Load(); err != nil {
 		}
 
-		if err := aliasRepo.Add(nick, code); err != nil {
+		cacheRepo := storage.NewCacheRepository(config.DefaultCacheSize)
+		if err := cacheRepo.Load(); err != nil {
+		}
+
+		tickerRepo := storage.NewTickerRepository()
+
+		resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo)
+		res := resSvc.Resolve(target)
+
+		if res.Status != resolver.StatusSuccess {
+			fmt.Printf("Could not resolve '%s' to any stock.\n", target)
+			return
+		}
+
+		if err := aliasRepo.Add(nick, res.Code); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving alias: %v\n", err)
 			os.Exit(1)
 		}
 
-		if resolutionSource == "code" {
-			fmt.Printf("Alias set: %s -> %s (direct code)\n", nick, code)
-		} else {
-			fmt.Printf("Alias set: %s -> %s (resolved via %s)\n", nick, code, resolutionSource)
+		switch res.Source {
+		case resolver.SourceCode:
+			fmt.Printf("Alias set: %s -> %s (direct code)\n", nick, res.Code)
+		case resolver.SourceAlias:
+			fmt.Printf("Alias set: %s -> %s (chained via alias '%s')\n", nick, res.Code, target)
+		case resolver.SourceSearch:
+			fmt.Printf("Alias set: %s -> %s (resolved via name '%s')\n", nick, res.Code, res.Name)
+		default:
+			fmt.Printf("Alias set: %s -> %s\n", nick, res.Code)
 		}
 	},
 }

@@ -17,11 +17,19 @@ var defaultTickersCSV []byte
 
 type TickerRepository struct {
 	tickers []models.Ticker
+	logger  Logger
 }
 
 func NewTickerRepository() *TickerRepository {
 	return &TickerRepository{
 		tickers: []models.Ticker{},
+		logger:  NewNopLogger(),
+	}
+}
+
+func (r *TickerRepository) SetLogger(l Logger) {
+	if l != nil {
+		r.logger = l
 	}
 }
 
@@ -106,7 +114,7 @@ func (r *TickerRepository) Load() error {
 			if len(embeddedLoaded) > len(loaded) {
 				loaded = embeddedLoaded
 				if saveErr := r.Save(loaded); saveErr != nil {
-					fmt.Fprintf(os.Stderr, "Warning: failed to update local tickers: %v\n", saveErr)
+					r.logger.Warn("Warning: failed to update local tickers: %v\n", saveErr)
 				}
 			}
 		}

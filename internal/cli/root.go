@@ -6,9 +6,8 @@ import (
 
 	"github.com/ericyhkim/juga/internal/ui"
 	"github.com/ericyhkim/juga/pkg/config"
-	"github.com/ericyhkim/juga/pkg/models"
 	"github.com/ericyhkim/juga/pkg/naver"
-	"github.com/ericyhkim/juga/pkg/search"
+	"github.com/ericyhkim/juga/pkg/resolver"
 	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
@@ -49,23 +48,6 @@ Example:
 		if err := portRepo.Load(); err != nil {
 		}
 
-		var expandedArgs []string
-		for _, arg := range args {
-			if items, ok := portRepo.Get(arg); ok {
-				expandedArgs = append(expandedArgs, items...)
-			} else {
-				expandedArgs = append(expandedArgs, arg)
-			}
-		}
-
-		isTruncated := false
-		ignoredCount := 0
-		if len(expandedArgs) > config.DefaultMaxStocks {
-			isTruncated = true
-			ignoredCount = len(expandedArgs) - config.DefaultMaxStocks
-			expandedArgs = expandedArgs[:config.DefaultMaxStocks]
-		}
-
 		aliasRepo := storage.NewAliasRepository()
 		if err := aliasRepo.Load(); err != nil {
 		}
@@ -75,42 +57,25 @@ Example:
 		}
 
 		tickerRepo := storage.NewTickerRepository()
-		tickerLoaded := false
+
+		resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo)
+		results := resSvc.ResolveAll(args)
+
+		isTruncated := false
+		ignoredCount := 0
+		if len(results) > config.DefaultMaxStocks {
+			isTruncated = true
+			ignoredCount = len(results) - config.DefaultMaxStocks
+			results = results[:config.DefaultMaxStocks]
+		}
 
 		var targetCodes []string
-		seen := make(map[string]bool)
-
-		for _, arg := range expandedArgs {
-			var code string
-
-			if resolved := aliasRepo.Resolve(arg); resolved != "" {
-				code = resolved
-			} else if models.IsValidCode(arg) {
-				code = arg
-			} else if cached, ok := cacheRepo.Get(arg); ok {
-				code = cached
-			} else {
-				if !tickerLoaded {
-					if err := tickerRepo.Load(); err != nil {
-						fmt.Fprintf(os.Stderr, "⚠️  Could not load ticker database: %v\n", err)
-						continue
-					}
-					tickerLoaded = true
-				}
-
-				results := search.FindTickers(tickerRepo.GetAll(), arg)
-				if len(results) > 0 {
-					code = results[0].Code
-					cacheRepo.Set(arg, code)
-				} else {
-					fmt.Printf("⚠️  Could not find stock for '%s'\n", arg)
-					continue
-				}
-			}
-
-			if code != "" && !seen[code] {
-				targetCodes = append(targetCodes, code)
-				seen[code] = true
+		for _, res := range results {
+			switch res.Status {
+			case resolver.StatusSuccess:
+				targetCodes = append(targetCodes, res.Code)
+			case resolver.StatusNotFound:
+				fmt.Printf("⚠️  Could not find stock for '%s'\n", res.Input)
 			}
 		}
 
