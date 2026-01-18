@@ -1,42 +1,37 @@
 package resolver
 
 import (
-	"os"
 	"testing"
 
-	"github.com/ericyhkim/juga/pkg/storage"
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
-func setupTestResolver(t *testing.T) (*Resolver, func()) {
-	aliasFile, _ := os.CreateTemp("", "alias_*.json")
-	portFile, _ := os.CreateTemp("", "port_*.json")
-	cacheFile, _ := os.CreateTemp("", "cache_*.json")
-	
-	aRepo := storage.NewAliasRepository()
-	pRepo := storage.NewPortfolioRepository()
-	cRepo := storage.NewCacheRepository(10)
-	tRepo := storage.NewTickerRepository()
-
-	aRepo.Add("sam", "005930")
-	pRepo.Add("tech", []string{"sam", "kakao"})
-	
-	r := NewResolver(pRepo, aRepo, cRepo, tRepo)
-
-	cleanup := func() {
-		os.Remove(aliasFile.Name())
-		os.Remove(portFile.Name())
-		os.Remove(cacheFile.Name())
+func setupTestResolver(t *testing.T) *Resolver {
+	aMock := &MockAliasProvider{
+		Data: map[string]string{
+			"sam": "005930",
+		},
+	}
+	pMock := &MockPortfolioProvider{
+		Data: map[string][]string{
+			"tech": {"sam", "kakao"},
+		},
+	}
+	cMock := &MockCacheProvider{
+		Data: make(map[string]string),
+	}
+	tMock := &MockTickerProvider{
+		Tickers: []models.Ticker{},
 	}
 
-	return r, cleanup
+	return NewResolver(pMock, aMock, cMock, tMock)
 }
 
 func TestResolve_Alias(t *testing.T) {
-	r, cleanup := setupTestResolver(t)
-	defer cleanup()
+	r := setupTestResolver(t)
 
 	res := r.Resolve("sam")
-	
+
 	if res.Status != StatusSuccess {
 		t.Errorf("Expected success, got %s", res.Status)
 	}
@@ -49,11 +44,10 @@ func TestResolve_Alias(t *testing.T) {
 }
 
 func TestResolve_DirectCode(t *testing.T) {
-	r, cleanup := setupTestResolver(t)
-	defer cleanup()
+	r := setupTestResolver(t)
 
 	res := r.Resolve("000660")
-	
+
 	if res.Status != StatusSuccess {
 		t.Errorf("Expected success, got %s", res.Status)
 	}
@@ -66,15 +60,14 @@ func TestResolve_DirectCode(t *testing.T) {
 }
 
 func TestResolveAll_Portfolio(t *testing.T) {
-	r, cleanup := setupTestResolver(t)
-	defer cleanup()
+	r := setupTestResolver(t)
 
 	results := r.ResolveAll([]string{"tech"})
 
 	if len(results) != 2 {
 		t.Errorf("Expected 2 results from portfolio expansion, got %d", len(results))
 	}
-	
+
 	if results[0].Input != "sam" || results[0].Code != "005930" {
 		t.Errorf("Expected first item to be resolved alias 'sam', got %v", results[0])
 	}
