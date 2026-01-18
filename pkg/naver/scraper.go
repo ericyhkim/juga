@@ -17,7 +17,7 @@ const (
 	kospiURL        = "https://finance.naver.com/sise/sise_market_sum.naver?sosok=0&page=%d"
 	kosdaqURL       = "https://finance.naver.com/sise/sise_market_sum.naver?sosok=1&page=%d"
 	etfAPIURL       = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=0&targetColumn=market_sum&sortOrder=desc"
-	defaultMaxPages = 40 // Fallback if detection fails
+	defaultMaxPages = 40
 )
 
 // Scraper handles fetching the full list of tickers from Naver Finance.
@@ -27,9 +27,9 @@ type Scraper struct {
 	pgRe   *regexp.Regexp
 }
 
-func NewScraper() *Scraper {
+func NewScraper(timeout time.Duration) *Scraper {
 	return &Scraper{
-		client: &http.Client{Timeout: 10 * time.Second},
+		client: &http.Client{Timeout: timeout},
 		re:     regexp.MustCompile(`href="/item/main.naver\?code=([A-Z0-9]+)" class="tltle">([^<]+)</a>`),
 		pgRe:   regexp.MustCompile(`class="pgRR">\s*<a href=".*?page=(\d+)`),
 	}

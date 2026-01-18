@@ -14,12 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const MaxStocks = 20
-
-// Version is set during the build process via ldflags.
 var Version = "dev"
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "juga [names...]",
 	Short:   "A minimalist CLI for real-time Korean stock prices",
@@ -51,7 +47,6 @@ Example:
 
 		portRepo := storage.NewPortfolioRepository()
 		if err := portRepo.Load(); err != nil {
-			// Non-critical, continue without portfolios
 		}
 
 		var expandedArgs []string
@@ -65,20 +60,18 @@ Example:
 
 		isTruncated := false
 		ignoredCount := 0
-		if len(expandedArgs) > MaxStocks {
+		if len(expandedArgs) > config.DefaultMaxStocks {
 			isTruncated = true
-			ignoredCount = len(expandedArgs) - MaxStocks
-			expandedArgs = expandedArgs[:MaxStocks]
+			ignoredCount = len(expandedArgs) - config.DefaultMaxStocks
+			expandedArgs = expandedArgs[:config.DefaultMaxStocks]
 		}
 
 		aliasRepo := storage.NewAliasRepository()
 		if err := aliasRepo.Load(); err != nil {
-			// Non-critical
 		}
 
-		cacheRepo := storage.NewCacheRepository()
+		cacheRepo := storage.NewCacheRepository(config.DefaultCacheSize)
 		if err := cacheRepo.Load(); err != nil {
-			// Non-critical
 		}
 
 		tickerRepo := storage.NewTickerRepository()
@@ -122,14 +115,13 @@ Example:
 		}
 
 		if cacheErr := cacheRepo.Save(); cacheErr != nil {
-			// Non-critical
 		}
 
 		if len(targetCodes) == 0 {
 			return
 		}
 
-		client := naver.NewClient()
+		client := naver.NewClient(naver.WithTimeout(config.DefaultClientTimeout))
 		stockResult, stockErr := client.FetchStocks(targetCodes)
 
 		if stockErr != nil {
@@ -140,7 +132,7 @@ Example:
 		fmt.Println(ui.RenderStockTable(stockResult))
 
 		if isTruncated {
-			fmt.Fprintf(os.Stderr, "\n⚠️  Display limited to %d stocks. %d items were ignored.\n", MaxStocks, ignoredCount)
+			fmt.Fprintf(os.Stderr, "\n⚠️  Display limited to %d stocks. %d items were ignored.\n", config.DefaultMaxStocks, ignoredCount)
 		}
 	},
 }

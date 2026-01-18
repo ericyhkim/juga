@@ -14,19 +14,32 @@ import (
 const (
 	naverPollingURL = "https://polling.finance.naver.com/api/realtime/domestic/stock/"
 	naverIndexURL   = "https://polling.finance.naver.com/api/realtime/domestic/index/KOSPI,KOSDAQ"
-	defaultTimeout  = 2 * time.Second
 )
 
 type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient() *Client {
-	return &Client{
+type ClientOption func(*Client)
+
+func WithTimeout(d time.Duration) ClientOption {
+	return func(c *Client) {
+		c.httpClient.Timeout = d
+	}
+}
+
+func NewClient(opts ...ClientOption) *Client {
+	c := &Client{
 		httpClient: &http.Client{
-			Timeout: defaultTimeout,
+			Timeout: 2 * time.Second,
 		},
 	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
 }
 
 func (c *Client) FetchStocks(codes []string) ([]models.Stock, error) {

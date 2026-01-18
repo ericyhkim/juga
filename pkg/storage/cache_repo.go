@@ -7,18 +7,18 @@ import (
 	"github.com/ericyhkim/juga/pkg/config"
 )
 
-const MaxCacheSize = 100
-
 type CacheRepository struct {
 	Data  map[string]string `json:"data"`
 	Order []string          `json:"order"`
+	limit int
 	dirty bool
 }
 
-func NewCacheRepository() *CacheRepository {
+func NewCacheRepository(limit int) *CacheRepository {
 	return &CacheRepository{
 		Data:  make(map[string]string),
 		Order: make([]string, 0),
+		limit: limit,
 	}
 }
 
@@ -96,7 +96,7 @@ func (r *CacheRepository) Set(term, code string) {
 	r.moveToFront(term)
 	r.dirty = true
 
-	if len(r.Order) > MaxCacheSize {
+	if len(r.Order) > r.limit {
 		toRemove := r.Order[len(r.Order)-1]
 		delete(r.Data, toRemove)
 		r.Order = r.Order[:len(r.Order)-1]

@@ -1,5 +1,7 @@
 package models
 
+const StockCodeLength = 6
+
 type Stock struct {
 	Code          string
 	Name          string
@@ -15,7 +17,7 @@ type Stock struct {
 }
 
 func IsValidCode(s string) bool {
-	if len(s) != 6 {
+	if len(s) != StockCodeLength {
 		return false
 	}
 	for _, r := range s {
