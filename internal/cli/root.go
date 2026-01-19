@@ -94,7 +94,10 @@ Example:
 			return
 		}
 
-		fmt.Println(ui.RenderStockTable(stockResult))
+		presenter := ui.NewPresenter()
+		stockVMs := presenter.PrepareList(stockResult)
+
+		fmt.Println(ui.RenderStockTable(stockVMs))
 
 		if isTruncated {
 			fmt.Fprintf(os.Stderr, "\n⚠️  Display limited to %d stocks. %d items were ignored.\n", config.DefaultMaxStocks, ignoredCount)

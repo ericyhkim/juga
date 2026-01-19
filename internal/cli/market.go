@@ -24,6 +24,9 @@ var marketCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println(ui.RenderMarketDetails(indices))
+		presenter := ui.NewPresenter()
+		marketVMs := presenter.PrepareList(indices)
+
+		fmt.Println(ui.RenderMarketDetails(marketVMs))
 	},
 }

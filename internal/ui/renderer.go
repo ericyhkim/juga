@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ericyhkim/juga/pkg/models"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
-func RenderIndices(indices []models.Stock) string {
+func RenderIndices(indices []StockViewModel) string {
 	if len(indices) == 0 {
 		return ""
 	}
@@ -17,11 +15,11 @@ func RenderIndices(indices []models.Stock) string {
 	var parts []string
 	for _, idx := range indices {
 		name := StyleNameActive.Render(idx.Name)
-		price := formatNumber(idx.Price)
+		price := idx.Price
 
-		changeText := fmt.Sprintf("%s %s (%.2f%%)",
-			getDirectionSymbol(idx),
-			formatNumber(idx.Change),
+		changeText := fmt.Sprintf("%s %s (%s)",
+			idx.TrendIcon,
+			idx.Change,
 			idx.ChangePercent,
 		)
 
@@ -40,7 +38,7 @@ func RenderIndices(indices []models.Stock) string {
 	return strings.Join(parts, "   |   ")
 }
 
-func RenderMarketDetails(indices []models.Stock) string {
+func RenderMarketDetails(indices []StockViewModel) string {
 	if len(indices) == 0 {
 		return ""
 	}
@@ -48,10 +46,10 @@ func RenderMarketDetails(indices []models.Stock) string {
 	var blocks []string
 	for _, idx := range indices {
 		name := StyleNameActive.Render(idx.Name)
-		price := formatNumber(idx.Price)
-		changeText := fmt.Sprintf("%s %s (%.2f%%)",
-			getDirectionSymbol(idx),
-			formatNumber(idx.Change),
+		price := idx.Price
+		changeText := fmt.Sprintf("%s %s (%s)",
+			idx.TrendIcon,
+			idx.Change,
 			idx.ChangePercent,
 		)
 
@@ -64,12 +62,12 @@ func RenderMarketDetails(indices []models.Stock) string {
 			statsLine = StyleChangeNeutral.Render(fmt.Sprintf("%s %s", price, changeText))
 		}
 
-		header := fmt.Sprintf("%-8s %s", name, statsLine)
+		header := fmt.Sprintf("% -8s %s", name, statsLine)
 
 		details := StyleNameInactive.Render(fmt.Sprintf("         High: %s   Low: %s   Val: %s",
-			formatNumber(idx.High),
-			formatNumber(idx.Low),
-			formatLargeValue(idx.TradingValue),
+			idx.High,
+			idx.Low,
+			idx.TradingValue,
 		))
 
 		blocks = append(blocks, header+"\n"+details)
@@ -78,17 +76,7 @@ func RenderMarketDetails(indices []models.Stock) string {
 	return strings.Join(blocks, "\n\n")
 }
 
-func formatLargeValue(v float64) string {
-	if v >= 1000000 {
-		return fmt.Sprintf("%.1fT", v/1000000)
-	}
-	if v >= 1000 {
-		return fmt.Sprintf("%.1fB", v/1000)
-	}
-	return fmt.Sprintf("%.1fM", v)
-}
-
-func RenderStockTable(stocks []models.Stock) string {
+func RenderStockTable(stocks []StockViewModel) string {
 	if len(stocks) == 0 {
 		return ""
 	}
@@ -101,7 +89,7 @@ func RenderStockTable(stocks []models.Stock) string {
 		if nameWidth > maxNameWidth {
 			maxNameWidth = nameWidth
 		}
-		priceWidth := lipgloss.Width(formatNumber(s.Price))
+		priceWidth := lipgloss.Width(s.Price)
 		if priceWidth > maxPriceWidth {
 			maxPriceWidth = priceWidth
 		}
@@ -119,11 +107,11 @@ func RenderStockTable(stocks []models.Stock) string {
 		price := StylePrice.Copy().
 			Width(maxPriceWidth).
 			Align(lipgloss.Right).
-			Render(formatNumber(s.Price))
+			Render(s.Price)
 
-		changeText := fmt.Sprintf("%s %s (%.2f%%)",
-			getDirectionSymbol(s),
-			formatNumber(s.Change),
+		changeText := fmt.Sprintf("%s %s (%s)",
+			s.TrendIcon,
+			s.Change,
 			s.ChangePercent,
 		)
 
@@ -140,44 +128,6 @@ func RenderStockTable(stocks []models.Stock) string {
 	}
 
 	return strings.Join(rows, "\n")
-}
-
-func formatNumber(n float64) string {
-	var s string
-	if n == float64(int64(n)) {
-		s = fmt.Sprintf("%.0f", n)
-	} else {
-		s = fmt.Sprintf("%.2f", n)
-	}
-
-	parts := strings.Split(s, ".")
-	intPart := parts[0]
-
-	var res strings.Builder
-	l := len(intPart)
-	for i, r := range intPart {
-		if i > 0 && (l-i)%3 == 0 && intPart[i-1] != '-' {
-			res.WriteRune(',')
-		}
-		res.WriteRune(r)
-	}
-
-	if len(parts) > 1 {
-		res.WriteRune('.')
-		res.WriteString(parts[1])
-	}
-
-	return res.String()
-}
-
-func getDirectionSymbol(s models.Stock) string {
-	if s.IsRising {
-		return "▲"
-	}
-	if s.IsFalling {
-		return "▼"
-	}
-	return "-"
 }
 
 // isMarketOpen checks if the market status indicates active trading.
