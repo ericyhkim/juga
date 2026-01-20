@@ -3,32 +3,27 @@ package storage
 import (
 	"encoding/json"
 	"os"
-
-	"github.com/ericyhkim/juga/pkg/config"
 )
 
 type CacheRepository struct {
-	Data  map[string]string `json:"data"`
-	Order []string          `json:"order"`
-	limit int
-	dirty bool
+	filePath string
+	Data     map[string]string `json:"data"`
+	Order    []string          `json:"order"`
+	limit    int
+	dirty    bool
 }
 
-func NewCacheRepository(limit int) *CacheRepository {
+func NewCacheRepository(filePath string, limit int) *CacheRepository {
 	return &CacheRepository{
-		Data:  make(map[string]string),
-		Order: make([]string, 0),
-		limit: limit,
+		filePath: filePath,
+		Data:     make(map[string]string),
+		Order:    make([]string, 0),
+		limit:    limit,
 	}
 }
 
 func (r *CacheRepository) Load() error {
-	path, err := config.GetCachePath()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Open(path)
+	f, err := os.Open(r.filePath)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -56,12 +51,7 @@ func (r *CacheRepository) Save() error {
 		return nil
 	}
 
-	path, err := config.GetCachePath()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path)
+	f, err := os.Create(r.filePath)
 	if err != nil {
 		return err
 	}

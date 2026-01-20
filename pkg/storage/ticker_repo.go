@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/ericyhkim/juga/pkg/config"
 	"github.com/ericyhkim/juga/pkg/models"
 )
 
@@ -16,14 +15,16 @@ import (
 var defaultTickersCSV []byte
 
 type TickerRepository struct {
-	tickers []models.Ticker
-	logger  Logger
+	filePath string
+	tickers  []models.Ticker
+	logger   Logger
 }
 
-func NewTickerRepository() *TickerRepository {
+func NewTickerRepository(filePath string) *TickerRepository {
 	return &TickerRepository{
-		tickers: []models.Ticker{},
-		logger:  NewNopLogger(),
+		filePath: filePath,
+		tickers:  []models.Ticker{},
+		logger:   NewNopLogger(),
 	}
 }
 
@@ -34,12 +35,7 @@ func (r *TickerRepository) SetLogger(l Logger) {
 }
 
 func (r *TickerRepository) LastUpdated() (time.Time, error) {
-	path, err := config.GetMasterTickersPath()
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	info, err := os.Stat(path)
+	info, err := os.Stat(r.filePath)
 	if os.IsNotExist(err) {
 		return time.Time{}, nil
 	}
@@ -59,18 +55,13 @@ func (r *TickerRepository) IsFresh(d time.Duration) bool {
 }
 
 func (r *TickerRepository) Load() error {
-	path, err := config.GetMasterTickersPath()
-	if err != nil {
-		return err
-	}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.WriteFile(path, defaultTickersCSV, 0644); err != nil {
+	if _, err := os.Stat(r.filePath); os.IsNotExist(err) {
+		if err := os.WriteFile(r.filePath, defaultTickersCSV, 0644); err != nil {
 			return fmt.Errorf("failed to create default tickers file: %w", err)
 		}
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(r.filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open tickers file: %w", err)
 	}
@@ -125,12 +116,7 @@ func (r *TickerRepository) Load() error {
 }
 
 func (r *TickerRepository) Save(tickers []models.Ticker) error {
-	path, err := config.GetMasterTickersPath()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path)
+	f, err := os.Create(r.filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create tickers file: %w", err)
 	}

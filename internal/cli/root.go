@@ -44,19 +44,23 @@ Example:
 			return
 		}
 
-		portRepo := storage.NewPortfolioRepository()
+		portPath, _ := config.GetPortfoliosPath()
+		portRepo := storage.NewPortfolioRepository(portPath)
 		if err := portRepo.Load(); err != nil {
 		}
 
-		aliasRepo := storage.NewAliasRepository()
+		aliasPath, _ := config.GetAliasesPath()
+		aliasRepo := storage.NewAliasRepository(aliasPath)
 		if err := aliasRepo.Load(); err != nil {
 		}
 
-		cacheRepo := storage.NewCacheRepository(config.DefaultCacheSize)
+		cachePath, _ := config.GetCachePath()
+		cacheRepo := storage.NewCacheRepository(cachePath, config.DefaultCacheSize)
 		if err := cacheRepo.Load(); err != nil {
 		}
 
-		tickerRepo := storage.NewTickerRepository()
+		tickerPath, _ := config.GetMasterTickersPath()
+		tickerRepo := storage.NewTickerRepository(tickerPath)
 
 		resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo)
 		results := resSvc.ResolveAll(args)

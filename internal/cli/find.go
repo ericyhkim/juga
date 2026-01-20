@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/config"
 	"github.com/ericyhkim/juga/pkg/search"
 	"github.com/ericyhkim/juga/pkg/storage"
 	"github.com/spf13/cobra"
@@ -36,7 +37,8 @@ Example:
 
 		query := args[0]
 
-		repo := storage.NewTickerRepository()
+		tickerPath, _ := config.GetMasterTickersPath()
+		repo := storage.NewTickerRepository(tickerPath)
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading ticker database: %v\n", err)
 			os.Exit(1)

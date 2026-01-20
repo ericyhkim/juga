@@ -50,21 +50,25 @@ The target can be a 6-digit code or a stock name (which will be auto-resolved).`
 		nick := args[0]
 		target := args[1]
 
-		aliasRepo := storage.NewAliasRepository()
+		aliasPath, _ := config.GetAliasesPath()
+		aliasRepo := storage.NewAliasRepository(aliasPath)
 		if err := aliasRepo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)
 		}
 
-		portRepo := storage.NewPortfolioRepository()
+		portPath, _ := config.GetPortfoliosPath()
+		portRepo := storage.NewPortfolioRepository(portPath)
 		if err := portRepo.Load(); err != nil {
 		}
 
-		cacheRepo := storage.NewCacheRepository(config.DefaultCacheSize)
+		cachePath, _ := config.GetCachePath()
+		cacheRepo := storage.NewCacheRepository(cachePath, config.DefaultCacheSize)
 		if err := cacheRepo.Load(); err != nil {
 		}
 
-		tickerRepo := storage.NewTickerRepository()
+		tickerPath, _ := config.GetMasterTickersPath()
+		tickerRepo := storage.NewTickerRepository(tickerPath)
 
 		resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo)
 		res := resSvc.Resolve(target)
@@ -112,7 +116,8 @@ var aliasRemoveCmd = &cobra.Command{
 
 		nick := args[0]
 
-		repo := storage.NewAliasRepository()
+		aliasPath, _ := config.GetAliasesPath()
+		repo := storage.NewAliasRepository(aliasPath)
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)
@@ -137,7 +142,8 @@ var aliasListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all registered aliases",
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := storage.NewAliasRepository()
+		aliasPath, _ := config.GetAliasesPath()
+		repo := storage.NewAliasRepository(aliasPath)
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)
@@ -175,7 +181,8 @@ var aliasEditCmd = &cobra.Command{
 	Long: `Opens all your aliases in the default editor ($EDITOR or nano/vi).
 Modify the mappings in 'nickname: code' format. Lines starting with # are ignored.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := storage.NewAliasRepository()
+		aliasPath, _ := config.GetAliasesPath()
+		repo := storage.NewAliasRepository(aliasPath)
 		if err := repo.Load(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
 			os.Exit(1)

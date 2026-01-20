@@ -4,27 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/ericyhkim/juga/pkg/config"
 )
 
 type PortfolioRepository struct {
+	filePath   string
 	portfolios map[string][]string
 }
 
-func NewPortfolioRepository() *PortfolioRepository {
+func NewPortfolioRepository(filePath string) *PortfolioRepository {
 	return &PortfolioRepository{
+		filePath:   filePath,
 		portfolios: make(map[string][]string),
 	}
 }
 
 func (r *PortfolioRepository) Load() error {
-	path, err := config.GetPortfoliosPath()
-	if err != nil {
-		return err
-	}
-
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(r.filePath)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -44,17 +39,12 @@ func (r *PortfolioRepository) Load() error {
 }
 
 func (r *PortfolioRepository) Save() error {
-	path, err := config.GetPortfoliosPath()
-	if err != nil {
-		return err
-	}
-
 	data, err := json.MarshalIndent(r.portfolios, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal portfolios: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(r.filePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write portfolios file: %w", err)
 	}
 	return nil

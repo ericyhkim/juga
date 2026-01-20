@@ -26,7 +26,8 @@ Process takes about 10-20 seconds.`,
 			os.Exit(1)
 		}
 
-		repo := storage.NewTickerRepository()
+		tickerPath, _ := config.GetMasterTickersPath()
+		repo := storage.NewTickerRepository(tickerPath)
 		if err := repo.Load(); err != nil {
 		}
 
