@@ -22,19 +22,41 @@ func (p *Presenter) PrepareList(stocks []models.Stock) []StockViewModel {
 }
 
 func (p *Presenter) PrepareStock(s models.Stock) StockViewModel {
-	return StockViewModel{
-		Name:          s.Name,
-		Price:         formatNumber(s.Price),
-		Change:        formatNumber(s.Change),
-		ChangePercent: fmt.Sprintf("%.2f%%", s.ChangePercent),
-		TrendIcon:     getDirectionSymbol(s),
-		IsRising:      s.IsRising,
-		IsFalling:     s.IsFalling,
-		High:          formatNumber(s.High),
-		Low:           formatNumber(s.Low),
-		TradingValue:  formatLargeValue(s.TradingValue),
-		MarketStatus:  s.MarketStatus,
+	nameStyle := StyleInactive
+	if isMarketOpen(s.MarketStatus) {
+		nameStyle = StyleActive
 	}
+
+	changeText := fmt.Sprintf("%s %s (%s)",
+		getDirectionSymbol(s),
+		formatNumber(s.Change),
+		fmt.Sprintf("%.2f%%", s.ChangePercent),
+	)
+
+	changeStyle := StyleNeutral
+	if s.IsRising {
+		changeStyle = StyleRise
+	} else if s.IsFalling {
+		changeStyle = StyleFall
+	}
+
+	return StockViewModel{
+		Name:         s.Name,
+		NameStyle:    nameStyle,
+		Price:        formatNumber(s.Price),
+		ChangeInfo:   changeText,
+		ChangeStyle:  changeStyle,
+		High:         formatNumber(s.High),
+		Low:          formatNumber(s.Low),
+		TradingValue: formatLargeValue(s.TradingValue),
+	}
+}
+
+// isMarketOpen checks if the market status indicates active trading.
+// This is a simplified check; Naver returns various strings like "OPEN", "CLOSE", "DELAY".
+func isMarketOpen(status string) bool {
+	status = strings.ToUpper(status)
+	return status == "OPEN" || status == "장중" // "장중" is Korean for "During Market"
 }
 
 func formatNumber(n float64) string {

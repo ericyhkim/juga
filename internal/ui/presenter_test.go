@@ -23,17 +23,14 @@ func TestPresenter_PrepareStock(t *testing.T) {
 	}
 
 	expected := StockViewModel{
-		Name:          "Samsung Electronics",
-		Price:         "75,000",
-		Change:        "1,500",
-		ChangePercent: "2.04%",
-		TrendIcon:     "▲",
-		IsRising:      true,
-		IsFalling:     false,
-		High:          "76,000",
-		Low:           "74,000",
-		TradingValue:  "1.5T",
-		MarketStatus:  "OPEN",
+		Name:        "Samsung Electronics",
+		NameStyle:   StyleActive,
+		Price:       "75,000",
+		ChangeInfo:  "▲ 1,500 (2.04%)",
+		ChangeStyle: StyleRise,
+		High:        "76,000",
+		Low:         "74,000",
+		TradingValue: "1.5T",
 	}
 
 	result := p.PrepareStock(input)
@@ -41,17 +38,17 @@ func TestPresenter_PrepareStock(t *testing.T) {
 	if result.Name != expected.Name {
 		t.Errorf("Expected Name %q, got %q", expected.Name, result.Name)
 	}
+	if result.NameStyle != expected.NameStyle {
+		t.Errorf("Expected NameStyle %v, got %v", expected.NameStyle, result.NameStyle)
+	}
 	if result.Price != expected.Price {
 		t.Errorf("Expected Price %q, got %q", expected.Price, result.Price)
 	}
-	if result.Change != expected.Change {
-		t.Errorf("Expected Change %q, got %q", expected.Change, result.Change)
+	if result.ChangeInfo != expected.ChangeInfo {
+		t.Errorf("Expected ChangeInfo %q, got %q", expected.ChangeInfo, result.ChangeInfo)
 	}
-	if result.ChangePercent != expected.ChangePercent {
-		t.Errorf("Expected ChangePercent %q, got %q", expected.ChangePercent, result.ChangePercent)
-	}
-	if result.TrendIcon != expected.TrendIcon {
-		t.Errorf("Expected TrendIcon %q, got %q", expected.TrendIcon, result.TrendIcon)
+	if result.ChangeStyle != expected.ChangeStyle {
+		t.Errorf("Expected ChangeStyle %v, got %v", expected.ChangeStyle, result.ChangeStyle)
 	}
 	if result.TradingValue != expected.TradingValue {
 		t.Errorf("Expected TradingValue %q, got %q", expected.TradingValue, result.TradingValue)

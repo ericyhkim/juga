@@ -14,24 +14,10 @@ func RenderIndices(indices []StockViewModel) string {
 
 	var parts []string
 	for _, idx := range indices {
-		name := StyleNameActive.Render(idx.Name)
+		name := GetStyle(idx.NameStyle).Render(idx.Name)
 		price := idx.Price
-
-		changeText := fmt.Sprintf("%s %s (%s)",
-			idx.TrendIcon,
-			idx.Change,
-			idx.ChangePercent,
-		)
-
-		var stats string
-		if idx.IsRising {
-			stats = StyleChangeRise.Render(fmt.Sprintf("%s %s", price, changeText))
-		} else if idx.IsFalling {
-			stats = StyleChangeFall.Render(fmt.Sprintf("%s %s", price, changeText))
-		} else {
-			stats = StyleChangeNeutral.Render(fmt.Sprintf("%s %s", price, changeText))
-		}
-
+		
+		stats := GetStyle(idx.ChangeStyle).Render(fmt.Sprintf("%s %s", price, idx.ChangeInfo))
 		parts = append(parts, fmt.Sprintf("%s %s", name, stats))
 	}
 
@@ -45,22 +31,9 @@ func RenderMarketDetails(indices []StockViewModel) string {
 
 	var blocks []string
 	for _, idx := range indices {
-		name := StyleNameActive.Render(idx.Name)
-		price := idx.Price
-		changeText := fmt.Sprintf("%s %s (%s)",
-			idx.TrendIcon,
-			idx.Change,
-			idx.ChangePercent,
-		)
-
-		var statsLine string
-		if idx.IsRising {
-			statsLine = StyleChangeRise.Render(fmt.Sprintf("%s %s", price, changeText))
-		} else if idx.IsFalling {
-			statsLine = StyleChangeFall.Render(fmt.Sprintf("%s %s", price, changeText))
-		} else {
-			statsLine = StyleChangeNeutral.Render(fmt.Sprintf("%s %s", price, changeText))
-		}
+		name := GetStyle(idx.NameStyle).Render(idx.Name)
+		
+		statsLine := GetStyle(idx.ChangeStyle).Render(fmt.Sprintf("%s %s", idx.Price, idx.ChangeInfo))
 
 		header := fmt.Sprintf("% -8s %s", name, statsLine)
 
@@ -97,44 +70,19 @@ func RenderStockTable(stocks []StockViewModel) string {
 
 	var rows []string
 	for _, s := range stocks {
-		var name string
-		if isMarketOpen(s.MarketStatus) {
-			name = StyleNameActive.Copy().Width(maxNameWidth).Render(s.Name)
-		} else {
-			name = StyleNameInactive.Copy().Width(maxNameWidth).Render(s.Name)
-		}
+		name := GetStyle(s.NameStyle).Copy().Width(maxNameWidth).Render(s.Name)
 
 		price := StylePrice.Copy().
 			Width(maxPriceWidth).
 			Align(lipgloss.Right).
 			Render(s.Price)
 
-		changeText := fmt.Sprintf("%s %s (%s)",
-			s.TrendIcon,
-			s.Change,
-			s.ChangePercent,
-		)
-
-		var change string
-		if s.IsRising {
-			change = StyleChangeRise.Render(changeText)
-		} else if s.IsFalling {
-			change = StyleChangeFall.Render(changeText)
-		} else {
-			change = StyleChangeNeutral.Render(changeText)
-		}
+		change := GetStyle(s.ChangeStyle).Render(s.ChangeInfo)
 
 		rows = append(rows, fmt.Sprintf("%s  %s  %s", name, price, change))
 	}
 
 	return strings.Join(rows, "\n")
-}
-
-// isMarketOpen checks if the market status indicates active trading.
-// This is a simplified check; Naver returns various strings like "OPEN", "CLOSE", "DELAY".
-func isMarketOpen(status string) bool {
-	status = strings.ToUpper(status)
-	return status == "OPEN" || status == "장중" // "장중" is Korean for "During Market"
 }
 
 // ListItem represents a single row in a key-value list (e.g., Alias -> Code)
