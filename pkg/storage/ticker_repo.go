@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/models"
 )
 
@@ -17,20 +18,14 @@ var defaultTickersCSV []byte
 type TickerRepository struct {
 	filePath string
 	tickers  []models.Ticker
-	logger   Logger
+	logger   diag.Logger
 }
 
-func NewTickerRepository(filePath string) *TickerRepository {
+func NewTickerRepository(filePath string, logger diag.Logger) *TickerRepository {
 	return &TickerRepository{
 		filePath: filePath,
 		tickers:  []models.Ticker{},
-		logger:   NewNopLogger(),
-	}
-}
-
-func (r *TickerRepository) SetLogger(l Logger) {
-	if l != nil {
-		r.logger = l
+		logger:   logger,
 	}
 }
 

@@ -3,6 +3,8 @@ package storage
 import (
 	"encoding/json"
 	"os"
+
+	"github.com/ericyhkim/juga/pkg/diag"
 )
 
 type CacheRepository struct {
@@ -11,14 +13,16 @@ type CacheRepository struct {
 	Order    []string          `json:"order"`
 	limit    int
 	dirty    bool
+	logger   diag.Logger
 }
 
-func NewCacheRepository(filePath string, limit int) *CacheRepository {
+func NewCacheRepository(filePath string, limit int, logger diag.Logger) *CacheRepository {
 	return &CacheRepository{
 		filePath: filePath,
 		Data:     make(map[string]string),
 		Order:    make([]string, 0),
 		limit:    limit,
+		logger:   logger,
 	}
 }
 
@@ -70,7 +74,6 @@ func (r *CacheRepository) Save() error {
 func (r *CacheRepository) Get(term string) (string, bool) {
 	code, ok := r.Data[term]
 	if ok {
-		// Move to front of LRU
 		r.moveToFront(term)
 	}
 	return code, ok
@@ -100,7 +103,6 @@ func (r *CacheRepository) Clear() {
 }
 
 func (r *CacheRepository) moveToFront(term string) {
-	// Find and remove if exists
 	idx := -1
 	for i, t := range r.Order {
 		if t == term {
@@ -113,6 +115,5 @@ func (r *CacheRepository) moveToFront(term string) {
 		r.Order = append(r.Order[:idx], r.Order[idx+1:]...)
 	}
 
-	// Prepend
 	r.Order = append([]string{term}, r.Order...)
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/models"
 )
 
@@ -18,6 +19,7 @@ const (
 
 type Client struct {
 	httpClient *http.Client
+	logger     diag.Logger
 }
 
 type ClientOption func(*Client)
@@ -28,11 +30,12 @@ func WithTimeout(d time.Duration) ClientOption {
 	}
 }
 
-func NewClient(opts ...ClientOption) *Client {
+func NewClient(logger diag.Logger, opts ...ClientOption) *Client {
 	c := &Client{
 		httpClient: &http.Client{
 			Timeout: 2 * time.Second,
 		},
+		logger: logger,
 	}
 
 	for _, opt := range opts {

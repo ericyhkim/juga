@@ -6,9 +6,8 @@ import (
 
 	"github.com/ericyhkim/juga/internal/ui"
 	"github.com/ericyhkim/juga/pkg/config"
-	"github.com/ericyhkim/juga/pkg/naver"
+	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/resolver"
-	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -28,6 +27,15 @@ Example:
   juga 삼성전자 kakao
   juga 005930`,
 	Args: cobra.ArbitraryArgs,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		logger := diag.NewStdLogger()
+		deps, err := NewDependencies(logger)
+		if err != nil {
+			return err
+		}
+		cmd.SetContext(SetDeps(cmd.Context(), deps))
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			fmt.Println(ui.RenderContextualHelp(ui.ContextualHelp{
@@ -44,26 +52,9 @@ Example:
 			return
 		}
 
-		portPath, _ := config.GetPortfoliosPath()
-		portRepo := storage.NewPortfolioRepository(portPath)
-		if err := portRepo.Load(); err != nil {
-		}
+		deps := GetDeps(cmd)
 
-		aliasPath, _ := config.GetAliasesPath()
-		aliasRepo := storage.NewAliasRepository(aliasPath)
-		if err := aliasRepo.Load(); err != nil {
-		}
-
-		cachePath, _ := config.GetCachePath()
-		cacheRepo := storage.NewCacheRepository(cachePath, config.DefaultCacheSize)
-		if err := cacheRepo.Load(); err != nil {
-		}
-
-		tickerPath, _ := config.GetMasterTickersPath()
-		tickerRepo := storage.NewTickerRepository(tickerPath)
-
-		resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo)
-		results := resSvc.ResolveAll(args)
+		results := deps.Resolver.ResolveAll(args)
 
 		isTruncated := false
 		ignoredCount := 0
@@ -83,18 +74,18 @@ Example:
 			}
 		}
 
-		if cacheErr := cacheRepo.Save(); cacheErr != nil {
+		if cacheErr := deps.Cache.Save(); cacheErr != nil {
+			deps.Logger.Error("Failed to save cache: %v", cacheErr)
 		}
 
 		if len(targetCodes) == 0 {
 			return
 		}
 
-		client := naver.NewClient(naver.WithTimeout(config.DefaultClientTimeout))
-		stockResult, stockErr := client.FetchStocks(targetCodes)
+		stockResult, stockErr := deps.Client.FetchStocks(targetCodes)
 
 		if stockErr != nil {
-			fmt.Fprintf(os.Stderr, "Error fetching data: %v\n", stockErr)
+			deps.Logger.Error("Error fetching data: %v", stockErr)
 			return
 		}
 

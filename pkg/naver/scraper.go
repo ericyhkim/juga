@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/models"
 )
 
@@ -20,18 +21,19 @@ const (
 	defaultMaxPages = 40
 )
 
-// Scraper handles fetching the full list of tickers from Naver Finance.
 type Scraper struct {
 	client *http.Client
 	re     *regexp.Regexp
 	pgRe   *regexp.Regexp
+	logger diag.Logger
 }
 
-func NewScraper(timeout time.Duration) *Scraper {
+func NewScraper(timeout time.Duration, logger diag.Logger) *Scraper {
 	return &Scraper{
 		client: &http.Client{Timeout: timeout},
 		re:     regexp.MustCompile(`href="/item/main.naver\?code=([A-Z0-9]+)" class="tltle">([^<]+)</a>`),
 		pgRe:   regexp.MustCompile(`class="pgRR">\s*<a href=".*?page=(\d+)`),
+		logger: logger,
 	}
 }
 
@@ -156,7 +158,7 @@ func (s *Scraper) ScrapeAll() ([]models.Ticker, error) {
 			tickers = append(tickers, models.Ticker{
 				Code:   item.ItemCode,
 				Name:   item.ItemName,
-				Market: "KOSPI", // Most ETFs are listed on KOSPI
+				Market: "KOSPI",
 			})
 		}
 		mu.Unlock()

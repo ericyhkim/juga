@@ -4,17 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/ericyhkim/juga/pkg/diag"
 )
 
 type PortfolioRepository struct {
 	filePath   string
 	portfolios map[string][]string
+	logger     diag.Logger
 }
 
-func NewPortfolioRepository(filePath string) *PortfolioRepository {
+func NewPortfolioRepository(filePath string, logger diag.Logger) *PortfolioRepository {
 	return &PortfolioRepository{
 		filePath:   filePath,
 		portfolios: make(map[string][]string),
+		logger:     logger,
 	}
 }
 

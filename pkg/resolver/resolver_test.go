@@ -3,6 +3,7 @@ package resolver
 import (
 	"testing"
 
+	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/models"
 )
 
@@ -24,7 +25,7 @@ func setupTestResolver(t *testing.T) *Resolver {
 		Tickers: []models.Ticker{},
 	}
 
-	return NewResolver(pMock, aMock, cMock, tMock)
+	return NewResolver(pMock, aMock, cMock, tMock, diag.NewNopLogger())
 }
 
 func TestResolve_Alias(t *testing.T) {

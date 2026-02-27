@@ -4,17 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/ericyhkim/juga/pkg/diag"
 )
 
 type AliasRepository struct {
 	filePath string
 	aliases  map[string]string
+	logger   diag.Logger
 }
 
-func NewAliasRepository(filePath string) *AliasRepository {
+func NewAliasRepository(filePath string, logger diag.Logger) *AliasRepository {
 	return &AliasRepository{
 		filePath: filePath,
 		aliases:  make(map[string]string),
+		logger:   logger,
 	}
 }
 

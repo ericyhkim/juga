@@ -2,15 +2,12 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
-	"github.com/ericyhkim/juga/pkg/config"
 	"github.com/ericyhkim/juga/pkg/resolver"
-	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -50,37 +47,18 @@ The target can be a 6-digit code or a stock name (which will be auto-resolved).`
 		nick := args[0]
 		target := args[1]
 
-		aliasPath, _ := config.GetAliasesPath()
-		aliasRepo := storage.NewAliasRepository(aliasPath)
-		if err := aliasRepo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		portPath, _ := config.GetPortfoliosPath()
-		portRepo := storage.NewPortfolioRepository(portPath)
-		if err := portRepo.Load(); err != nil {
-		}
-
-		cachePath, _ := config.GetCachePath()
-		cacheRepo := storage.NewCacheRepository(cachePath, config.DefaultCacheSize)
-		if err := cacheRepo.Load(); err != nil {
-		}
-
-		tickerPath, _ := config.GetMasterTickersPath()
-		tickerRepo := storage.NewTickerRepository(tickerPath)
-
-		resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo)
-		res := resSvc.Resolve(target)
+		res := deps.Resolver.Resolve(target)
 
 		if res.Status != resolver.StatusSuccess {
 			fmt.Printf("Could not resolve '%s' to any stock.\n", target)
 			return
 		}
 
-		if err := aliasRepo.Add(nick, res.Code); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving alias: %v\n", err)
-			os.Exit(1)
+		if err := deps.Aliases.Add(nick, res.Code); err != nil {
+			deps.Logger.Error("Error saving alias: %v", err)
+			return
 		}
 
 		switch res.Source {
@@ -116,21 +94,16 @@ var aliasRemoveCmd = &cobra.Command{
 
 		nick := args[0]
 
-		aliasPath, _ := config.GetAliasesPath()
-		repo := storage.NewAliasRepository(aliasPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		if repo.Resolve(nick) == "" {
+		if deps.Aliases.Resolve(nick) == "" {
 			fmt.Printf("Alias '%s' not found.\n", nick)
 			return
 		}
 
-		if err := repo.Remove(nick); err != nil {
-			fmt.Fprintf(os.Stderr, "Error removing alias: %v\n", err)
-			os.Exit(1)
+		if err := deps.Aliases.Remove(nick); err != nil {
+			deps.Logger.Error("Error removing alias: %v", err)
+			return
 		}
 
 		fmt.Printf("Alias '%s' removed.\n", nick)
@@ -142,14 +115,8 @@ var aliasListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all registered aliases",
 	Run: func(cmd *cobra.Command, args []string) {
-		aliasPath, _ := config.GetAliasesPath()
-		repo := storage.NewAliasRepository(aliasPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
-
-		all := repo.GetAll()
+		deps := GetDeps(cmd)
+		all := deps.Aliases.GetAll()
 		if len(all) == 0 {
 			fmt.Println("No aliases defined.")
 			return
@@ -181,14 +148,9 @@ var aliasEditCmd = &cobra.Command{
 	Long: `Opens all your aliases in the default editor ($EDITOR or nano/vi).
 Modify the mappings in 'nickname: code' format. Lines starting with # are ignored.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		aliasPath, _ := config.GetAliasesPath()
-		repo := storage.NewAliasRepository(aliasPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		all := repo.GetAll()
+		all := deps.Aliases.GetAll()
 		var keys []string
 		for k := range all {
 			keys = append(keys, k)
@@ -206,8 +168,8 @@ Modify the mappings in 'nickname: code' format. Lines starting with # are ignore
 
 		newContent, err := sys.OpenEditor(sb.String())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening editor: %v\n", err)
-			os.Exit(1)
+			deps.Logger.Error("Error opening editor: %v", err)
+			return
 		}
 
 		newAliases := make(map[string]string)
@@ -220,7 +182,7 @@ Modify the mappings in 'nickname: code' format. Lines starting with # are ignore
 
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
-				continue // Skip malformed lines
+				continue
 			}
 
 			nick := strings.TrimSpace(parts[0])
@@ -230,9 +192,9 @@ Modify the mappings in 'nickname: code' format. Lines starting with # are ignore
 			}
 		}
 
-		if err := repo.SetAll(newAliases); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving aliases: %v\n", err)
-			os.Exit(1)
+		if err := deps.Aliases.SetAll(newAliases); err != nil {
+			deps.Logger.Error("Error saving aliases: %v", err)
+			return
 		}
 
 		fmt.Printf("Successfully updated %d aliases.\n", len(newAliases))

@@ -2,14 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
-	"github.com/ericyhkim/juga/pkg/config"
-	"github.com/ericyhkim/juga/pkg/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -50,16 +47,11 @@ The stocks can be provided as names, codes, or existing aliases.`,
 		name := args[0]
 		items := args[1:]
 
-		portPath, _ := config.GetPortfoliosPath()
-		repo := storage.NewPortfolioRepository(portPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		if err := repo.Add(name, items); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving portfolio: %v\n", err)
-			os.Exit(1)
+		if err := deps.Portfolios.Add(name, items); err != nil {
+			deps.Logger.Error("Error saving portfolio: %v", err)
+			return
 		}
 
 		fmt.Printf("Portfolio '%s' saved with %d items.\n", name, len(items))
@@ -89,14 +81,9 @@ Add or remove stocks line by line. Lines starting with # are ignored.`,
 
 		name := args[0]
 
-		portPath, _ := config.GetPortfoliosPath()
-		repo := storage.NewPortfolioRepository(portPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		items, ok := repo.Get(name)
+		items, ok := deps.Portfolios.Get(name)
 		if !ok {
 			fmt.Printf("Portfolio '%s' does not exist.\n", name)
 			return
@@ -112,8 +99,8 @@ Add or remove stocks line by line. Lines starting with # are ignored.`,
 
 		newContent, err := sys.OpenEditor(sb.String())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening editor: %v\n", err)
-			os.Exit(1)
+			deps.Logger.Error("Error opening editor: %v", err)
+			return
 		}
 
 		var newItems []string
@@ -126,9 +113,9 @@ Add or remove stocks line by line. Lines starting with # are ignored.`,
 			newItems = append(newItems, line)
 		}
 
-		if err := repo.Add(name, newItems); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving portfolio: %v\n", err)
-			os.Exit(1)
+		if err := deps.Portfolios.Add(name, newItems); err != nil {
+			deps.Logger.Error("Error saving portfolio: %v", err)
+			return
 		}
 
 		fmt.Printf("Portfolio '%s' updated. Now has %d items.\n", name, len(newItems))
@@ -155,21 +142,16 @@ var portRemoveCmd = &cobra.Command{
 
 		name := args[0]
 
-		portPath, _ := config.GetPortfoliosPath()
-		repo := storage.NewPortfolioRepository(portPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		if _, ok := repo.Get(name); !ok {
+		if _, ok := deps.Portfolios.Get(name); !ok {
 			fmt.Printf("Portfolio '%s' not found.\n", name)
 			return
 		}
 
-		if err := repo.Remove(name); err != nil {
-			fmt.Fprintf(os.Stderr, "Error removing portfolio: %v\n", err)
-			os.Exit(1)
+		if err := deps.Portfolios.Remove(name); err != nil {
+			deps.Logger.Error("Error removing portfolio: %v", err)
+			return
 		}
 
 		fmt.Printf("Portfolio '%s' removed.\n", name)
@@ -181,14 +163,8 @@ var portListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all portfolios",
 	Run: func(cmd *cobra.Command, args []string) {
-		portPath, _ := config.GetPortfoliosPath()
-		repo := storage.NewPortfolioRepository(portPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading portfolios: %v\n", err)
-			os.Exit(1)
-		}
-
-		all := repo.GetAll()
+		deps := GetDeps(cmd)
+		all := deps.Portfolios.GetAll()
 		if len(all) == 0 {
 			fmt.Println("No portfolios defined.")
 			return

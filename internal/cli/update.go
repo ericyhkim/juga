@@ -2,11 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/ericyhkim/juga/pkg/config"
 	"github.com/ericyhkim/juga/pkg/naver"
-	"github.com/ericyhkim/juga/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -19,21 +17,18 @@ Process takes about 10-20 seconds.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Updating ticker database... (this may take a moment)")
 
-		scraper := naver.NewScraper(config.DefaultScraperTimeout)
+		deps := GetDeps(cmd)
+
+		scraper := naver.NewScraper(config.DefaultScraperTimeout, deps.Logger)
 		tickers, err := scraper.ScrapeAll()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error scraping data: %v\n", err)
-			os.Exit(1)
+			deps.Logger.Error("Error scraping data: %v", err)
+			return
 		}
 
-		tickerPath, _ := config.GetMasterTickersPath()
-		repo := storage.NewTickerRepository(tickerPath)
-		if err := repo.Load(); err != nil {
-		}
-
-		if err := repo.Save(tickers); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving database: %v\n", err)
-			os.Exit(1)
+		if err := deps.Tickers.Save(tickers); err != nil {
+			deps.Logger.Error("Error saving database: %v", err)
+			return
 		}
 
 		fmt.Printf("✅ Successfully updated %d tickers.\n", len(tickers))

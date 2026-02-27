@@ -2,12 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/ericyhkim/juga/internal/ui"
-	"github.com/ericyhkim/juga/pkg/config"
 	"github.com/ericyhkim/juga/pkg/search"
-	"github.com/ericyhkim/juga/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -37,14 +34,16 @@ Example:
 
 		query := args[0]
 
-		tickerPath, _ := config.GetMasterTickersPath()
-		repo := storage.NewTickerRepository(tickerPath)
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading ticker database: %v\n", err)
-			os.Exit(1)
+		deps := GetDeps(cmd)
+
+		if deps.Tickers.Count() == 0 {
+			if err := deps.Tickers.Load(); err != nil {
+				deps.Logger.Error("Error loading ticker database: %v", err)
+				return
+			}
 		}
 
-		results := search.FindTickers(repo.GetAll(), query)
+		results := search.FindTickers(deps.Tickers.GetAll(), query)
 
 		if len(results) == 0 {
 			fmt.Printf("No matches found for '%s'.\n", query)

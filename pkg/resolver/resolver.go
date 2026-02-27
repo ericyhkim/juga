@@ -3,30 +3,32 @@ package resolver
 import (
 	"fmt"
 
+	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/models"
 	"github.com/ericyhkim/juga/pkg/search"
 )
 
-// Resolver orchestrates the lookup of stock codes from various sources.
 type Resolver struct {
 	portfolios PortfolioProvider
 	aliases    AliasProvider
 	cache      CacheProvider
 	tickers    TickerProvider
+	logger     diag.Logger
 }
 
-// NewResolver creates a new resolver instance with the provided repositories.
 func NewResolver(
 	p PortfolioProvider,
 	a AliasProvider,
 	c CacheProvider,
 	t TickerProvider,
+	logger diag.Logger,
 ) *Resolver {
 	return &Resolver{
 		portfolios: p,
 		aliases:    a,
 		cache:      c,
 		tickers:    t,
+		logger:     logger,
 	}
 }
 
@@ -88,7 +90,9 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 	}
 
 	if r.tickers.Count() == 0 {
-		_ = r.tickers.Load()
+		if err := r.tickers.Load(); err != nil {
+			r.logger.Error("Failed to load ticker list: %v", err)
+		}
 	}
 
 	results := search.FindTickers(r.tickers.GetAll(), input)
