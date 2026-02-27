@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/ericyhkim/juga/internal/ui"
-	"github.com/ericyhkim/juga/pkg/search"
 	"github.com/spf13/cobra"
 )
 
@@ -36,14 +35,11 @@ Example:
 
 		deps := GetDeps(cmd)
 
-		if deps.Tickers.Count() == 0 {
-			if err := deps.Tickers.Load(); err != nil {
-				deps.Logger.Error("Error loading ticker database: %v", err)
-				return
-			}
+		results, err := deps.StockService.SearchTickers(query)
+		if err != nil {
+			deps.Logger.Error("Error searching tickers: %v", err)
+			return
 		}
-
-		results := search.FindTickers(deps.Tickers.GetAll(), query)
 
 		if len(results) == 0 {
 			fmt.Printf("No matches found for '%s'.\n", query)

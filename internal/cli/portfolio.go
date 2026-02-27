@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/service"
 
 	"github.com/spf13/cobra"
 )
@@ -49,12 +51,13 @@ The stocks can be provided as names, codes, or existing aliases.`,
 
 		deps := GetDeps(cmd)
 
-		if err := deps.Portfolios.Add(name, items); err != nil {
+		res, err := deps.PortfolioService.CreatePortfolio(name, items)
+		if err != nil {
 			deps.Logger.Error("Error saving portfolio: %v", err)
 			return
 		}
 
-		fmt.Printf("Portfolio '%s' saved with %d items.\n", name, len(items))
+		fmt.Printf("Portfolio '%s' saved with %d items.\n", res.Name, res.Count)
 	},
 }
 
@@ -83,9 +86,13 @@ Add or remove stocks line by line. Lines starting with # are ignored.`,
 
 		deps := GetDeps(cmd)
 
-		items, ok := deps.Portfolios.Get(name)
-		if !ok {
-			fmt.Printf("Portfolio '%s' does not exist.\n", name)
+		items, err := deps.PortfolioService.GetPortfolio(name)
+		if err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				fmt.Printf("Portfolio '%s' does not exist.\n", name)
+			} else {
+				deps.Logger.Error("Error: %v", err)
+			}
 			return
 		}
 
@@ -103,22 +110,13 @@ Add or remove stocks line by line. Lines starting with # are ignored.`,
 			return
 		}
 
-		var newItems []string
-		lines := strings.Split(newContent, "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			newItems = append(newItems, line)
-		}
-
-		if err := deps.Portfolios.Add(name, newItems); err != nil {
+		res, err := deps.PortfolioService.ParseAndSave(name, newContent)
+		if err != nil {
 			deps.Logger.Error("Error saving portfolio: %v", err)
 			return
 		}
 
-		fmt.Printf("Portfolio '%s' updated. Now has %d items.\n", name, len(newItems))
+		fmt.Printf("Portfolio '%s' updated. Now has %d items.\n", res.Name, res.Count)
 	},
 }
 
@@ -144,13 +142,12 @@ var portRemoveCmd = &cobra.Command{
 
 		deps := GetDeps(cmd)
 
-		if _, ok := deps.Portfolios.Get(name); !ok {
-			fmt.Printf("Portfolio '%s' not found.\n", name)
-			return
-		}
-
-		if err := deps.Portfolios.Remove(name); err != nil {
-			deps.Logger.Error("Error removing portfolio: %v", err)
+		if err := deps.PortfolioService.RemovePortfolio(name); err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				fmt.Printf("Portfolio '%s' not found.\n", name)
+			} else {
+				deps.Logger.Error("Error removing portfolio: %v", err)
+			}
 			return
 		}
 
@@ -164,7 +161,7 @@ var portListCmd = &cobra.Command{
 	Short:   "List all portfolios",
 	Run: func(cmd *cobra.Command, args []string) {
 		deps := GetDeps(cmd)
-		all := deps.Portfolios.GetAll()
+		all := deps.PortfolioService.ListPortfolios()
 		if len(all) == 0 {
 			fmt.Println("No portfolios defined.")
 			return

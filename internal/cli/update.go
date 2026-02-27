@@ -3,8 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/ericyhkim/juga/pkg/config"
-	"github.com/ericyhkim/juga/pkg/naver"
 	"github.com/spf13/cobra"
 )
 
@@ -19,18 +17,12 @@ Process takes about 10-20 seconds.`,
 
 		deps := GetDeps(cmd)
 
-		scraper := naver.NewScraper(config.DefaultScraperTimeout, deps.Logger)
-		tickers, err := scraper.ScrapeAll()
+		res, err := deps.StockService.UpdateTickerDatabase()
 		if err != nil {
-			deps.Logger.Error("Error scraping data: %v", err)
+			deps.Logger.Error("Error updating ticker database: %v", err)
 			return
 		}
 
-		if err := deps.Tickers.Save(tickers); err != nil {
-			deps.Logger.Error("Error saving database: %v", err)
-			return
-		}
-
-		fmt.Printf("✅ Successfully updated %d tickers.\n", len(tickers))
+		fmt.Printf("✅ Successfully updated %d tickers.\n", res.Count)
 	},
 }

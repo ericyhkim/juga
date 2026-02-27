@@ -56,20 +56,8 @@ Example:
 
 		results := deps.Resolver.ResolveAll(args)
 
-		isTruncated := false
-		ignoredCount := 0
-		if len(results) > config.DefaultMaxStocks {
-			isTruncated = true
-			ignoredCount = len(results) - config.DefaultMaxStocks
-			results = results[:config.DefaultMaxStocks]
-		}
-
-		var targetCodes []string
 		for _, res := range results {
-			switch res.Status {
-			case resolver.StatusSuccess:
-				targetCodes = append(targetCodes, res.Code)
-			case resolver.StatusNotFound:
+			if res.Status == resolver.StatusNotFound {
 				fmt.Printf("⚠️  Could not find stock for '%s'\n", res.Input)
 			}
 		}
@@ -78,24 +66,23 @@ Example:
 			deps.Logger.Error("Failed to save cache: %v", cacheErr)
 		}
 
-		if len(targetCodes) == 0 {
+		fetchRes, err := deps.StockService.FetchStocks(results)
+		if err != nil {
+			deps.Logger.Error("Error fetching data: %v", err)
 			return
 		}
 
-		stockResult, stockErr := deps.Client.FetchStocks(targetCodes)
-
-		if stockErr != nil {
-			deps.Logger.Error("Error fetching data: %v", stockErr)
+		if len(fetchRes.Stocks) == 0 {
 			return
 		}
 
 		presenter := ui.NewPresenter()
-		stockVMs := presenter.PrepareList(stockResult)
+		stockVMs := presenter.PrepareList(fetchRes.Stocks)
 
 		fmt.Println(ui.RenderStockTable(stockVMs))
 
-		if isTruncated {
-			fmt.Fprintf(os.Stderr, "\n⚠️  Display limited to %d stocks. %d items were ignored.\n", config.DefaultMaxStocks, ignoredCount)
+		if fetchRes.IsTruncated {
+			fmt.Fprintf(os.Stderr, "\n⚠️  Display limited to some stocks. %d items were ignored.\n", fetchRes.IgnoredCount)
 		}
 	},
 }

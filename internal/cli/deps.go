@@ -8,6 +8,7 @@ import (
 	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/naver"
 	"github.com/ericyhkim/juga/pkg/resolver"
+	"github.com/ericyhkim/juga/pkg/service"
 	"github.com/ericyhkim/juga/pkg/storage"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,11 @@ type Dependencies struct {
 	Tickers    *storage.TickerRepository
 	Resolver   *resolver.Resolver
 	Client     *naver.Client
+
+	// Services
+	AliasService     *service.AliasService
+	PortfolioService *service.PortfolioService
+	StockService     *service.StockService
 }
 
 // NewDependencies initializes all core application components.
@@ -63,14 +69,27 @@ func NewDependencies(logger diag.Logger) (*Dependencies, error) {
 	resSvc := resolver.NewResolver(portRepo, aliasRepo, cacheRepo, tickerRepo, logger)
 	client := naver.NewClient(logger, naver.WithTimeout(config.DefaultClientTimeout))
 
+	aliasService := service.NewAliasService(aliasRepo, resSvc)
+	portfolioService := service.NewPortfolioService(portRepo)
+	stockService := service.NewStockService(
+		tickerRepo,
+		client,
+		logger,
+		config.DefaultScraperTimeout,
+		config.DefaultMaxStocks,
+	)
+
 	return &Dependencies{
-		Logger:     logger,
-		Aliases:    aliasRepo,
-		Portfolios: portRepo,
-		Cache:      cacheRepo,
-		Tickers:    tickerRepo,
-		Resolver:   resSvc,
-		Client:     client,
+		Logger:           logger,
+		Aliases:          aliasRepo,
+		Portfolios:       portRepo,
+		Cache:            cacheRepo,
+		Tickers:          tickerRepo,
+		Resolver:         resSvc,
+		Client:           client,
+		AliasService:     aliasService,
+		PortfolioService: portfolioService,
+		StockService:     stockService,
 	}, nil
 }
 
