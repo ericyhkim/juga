@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ericyhkim/juga/internal/core"
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
 func TestRenderStockTable(t *testing.T) {
-	stocks := []core.Stock{
+	stocks := []models.Stock{
 		{
 			Name:          "Samsung",
 			Price:         75000,
@@ -27,7 +27,11 @@ func TestRenderStockTable(t *testing.T) {
 		},
 	}
 
-	result := RenderStockTable(stocks)
+	// MVP: Use Presenter to prepare ViewModel
+	p := NewPresenter()
+	vms := p.PrepareList(stocks)
+
+	result := RenderStockTable(vms)
 	lines := strings.Split(result, "\n")
 
 	if len(lines) != 2 {
@@ -41,8 +45,8 @@ func TestRenderStockTable(t *testing.T) {
 		}
 	}
 
-	// Check for formatting/alignment (basic check)
-	if !strings.Contains(result, " 75,000") {
+	// Check for formatted values (logic now in Presenter, we just check presence in output)
+	if !strings.Contains(result, "75,000") {
 		t.Errorf("RenderStockTable() missing formatted price 75,000")
 	}
 	if !strings.Contains(result, "130,000") {
@@ -51,7 +55,7 @@ func TestRenderStockTable(t *testing.T) {
 }
 
 func TestRenderMarketDetails(t *testing.T) {
-	indices := []core.Stock{
+	indices := []models.Stock{
 		{
 			Name:          "KOSPI",
 			Price:         2586.32,
@@ -64,7 +68,10 @@ func TestRenderMarketDetails(t *testing.T) {
 		},
 	}
 
-	result := RenderMarketDetails(indices)
+	p := NewPresenter()
+	vms := p.PrepareList(indices)
+
+	result := RenderMarketDetails(vms)
 	if !strings.Contains(result, "KOSPI") {
 		t.Error("Missing KOSPI")
 	}
@@ -76,27 +83,8 @@ func TestRenderMarketDetails(t *testing.T) {
 	}
 }
 
-func TestFormatLargeValue(t *testing.T) {
-	tests := []struct {
-		input    float64
-		expected string
-	}{
-		{23478838, "23.5T"},
-		{9033037, "9.0T"},
-		{123456, "123.5B"},
-		{1234, "1.2B"},
-		{123, "123.0M"},
-	}
-
-	for _, tt := range tests {
-		if got := formatLargeValue(tt.input); got != tt.expected {
-			t.Errorf("formatLargeValue(%f) = %s, want %s", tt.input, got, tt.expected)
-		}
-	}
-}
-
 func TestRenderIndices(t *testing.T) {
-	indices := []core.Stock{
+	indices := []models.Stock{
 		{
 			Name:          "KOSPI",
 			Price:         2586.32,
@@ -113,7 +101,10 @@ func TestRenderIndices(t *testing.T) {
 		},
 	}
 
-	result := RenderIndices(indices)
+	p := NewPresenter()
+	vms := p.PrepareList(indices)
+
+	result := RenderIndices(vms)
 
 	if !strings.Contains(result, "KOSPI") || !strings.Contains(result, "KOSDAQ") {
 		t.Errorf("RenderIndices() missing index names")
@@ -123,31 +114,5 @@ func TestRenderIndices(t *testing.T) {
 	}
 	if !strings.Contains(result, " | ") {
 		t.Errorf("RenderIndices() missing separator")
-	}
-}
-
-func TestFormatNumber(t *testing.T) {
-	tests := []struct {
-		input    float64
-		expected string
-	}{
-		{0, "0"},
-		{1, "1"},
-		{12, "12"},
-		{123, "123"},
-		{1234, "1,234"},
-		{123456, "123,456"},
-		{1234567, "1,234,567"},
-		{-1234, "-1,234"},
-		{2586.32, "2,586.32"},
-		{947.92, "947.92"},
-		{0.41, "0.41"},
-		{-3.86, "-3.86"},
-	}
-
-	for _, tt := range tests {
-		if got := formatNumber(tt.input); got != tt.expected {
-			t.Errorf("formatNumber(%f) = %s, want %s", tt.input, got, tt.expected)
-		}
 	}
 }

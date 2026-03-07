@@ -17,3 +17,20 @@ var (
 	StyleChangeFall    = lipgloss.NewStyle().Foreground(ColorBlue)
 	StyleChangeNeutral = lipgloss.NewStyle().Foreground(ColorGrey)
 )
+
+func GetStyle(t StyleType) lipgloss.Style {
+	switch t {
+	case StyleRise:
+		return StyleChangeRise
+	case StyleFall:
+		return StyleChangeFall
+	case StyleActive:
+		return StyleNameActive
+	case StyleInactive:
+		return StyleNameInactive
+	case StyleNeutral:
+		return StyleChangeNeutral
+	default:
+		return lipgloss.NewStyle()
+	}
+}

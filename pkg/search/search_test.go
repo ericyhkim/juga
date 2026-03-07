@@ -1,13 +1,15 @@
-package core
+package search
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
 func TestFindTickers(t *testing.T) {
 	// Sample data subset
-	tickers := []Ticker{
+	tickers := []models.Ticker{
 		{Code: "005930", Name: "삼성전자", Market: "KOSPI"},
 		{Code: "005935", Name: "삼성전자우", Market: "KOSPI"},
 		{Code: "006400", Name: "삼성SDI", Market: "KOSPI"},

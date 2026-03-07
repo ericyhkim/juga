@@ -1,6 +1,10 @@
-package core
+package naver
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ericyhkim/juga/pkg/models"
+)
 
 func TestMapToStock(t *testing.T) {
 	raw := NaverStockData{
@@ -80,7 +84,7 @@ func TestIsValidCode(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if res := IsValidCode(test.input); res != test.expected {
+		if res := models.IsValidCode(test.input); res != test.expected {
 			t.Errorf("IsValidCode(%q) = %v; want %v", test.input, res, test.expected)
 		}
 	}

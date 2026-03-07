@@ -1,34 +1,33 @@
-package core
+package storage
 
 import (
 	"encoding/json"
 	"os"
 
-	"github.com/ericyhkim/juga/internal/config"
+	"github.com/ericyhkim/juga/pkg/diag"
 )
 
-const MaxCacheSize = 100
-
 type CacheRepository struct {
-	Data  map[string]string `json:"data"`
-	Order []string          `json:"order"`
-	dirty bool
+	filePath string
+	Data     map[string]string `json:"data"`
+	Order    []string          `json:"order"`
+	limit    int
+	dirty    bool
+	logger   diag.Logger
 }
 
-func NewCacheRepository() *CacheRepository {
+func NewCacheRepository(filePath string, limit int, logger diag.Logger) *CacheRepository {
 	return &CacheRepository{
-		Data:  make(map[string]string),
-		Order: make([]string, 0),
+		filePath: filePath,
+		Data:     make(map[string]string),
+		Order:    make([]string, 0),
+		limit:    limit,
+		logger:   logger,
 	}
 }
 
 func (r *CacheRepository) Load() error {
-	path, err := config.GetCachePath()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Open(path)
+	f, err := os.Open(r.filePath)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -56,12 +55,7 @@ func (r *CacheRepository) Save() error {
 		return nil
 	}
 
-	path, err := config.GetCachePath()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path)
+	f, err := os.Create(r.filePath)
 	if err != nil {
 		return err
 	}
@@ -80,7 +74,6 @@ func (r *CacheRepository) Save() error {
 func (r *CacheRepository) Get(term string) (string, bool) {
 	code, ok := r.Data[term]
 	if ok {
-		// Move to front of LRU
 		r.moveToFront(term)
 	}
 	return code, ok
@@ -96,7 +89,7 @@ func (r *CacheRepository) Set(term, code string) {
 	r.moveToFront(term)
 	r.dirty = true
 
-	if len(r.Order) > MaxCacheSize {
+	if len(r.Order) > r.limit {
 		toRemove := r.Order[len(r.Order)-1]
 		delete(r.Data, toRemove)
 		r.Order = r.Order[:len(r.Order)-1]
@@ -110,7 +103,6 @@ func (r *CacheRepository) Clear() {
 }
 
 func (r *CacheRepository) moveToFront(term string) {
-	// Find and remove if exists
 	idx := -1
 	for i, t := range r.Order {
 		if t == term {
@@ -123,6 +115,5 @@ func (r *CacheRepository) moveToFront(term string) {
 		r.Order = append(r.Order[:idx], r.Order[idx+1:]...)
 	}
 
-	// Prepend
 	r.Order = append([]string{term}, r.Order...)
 }

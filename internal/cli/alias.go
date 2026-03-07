@@ -1,14 +1,15 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
-	"github.com/ericyhkim/juga/internal/core"
 	"github.com/ericyhkim/juga/internal/sys"
 	"github.com/ericyhkim/juga/internal/ui"
+	"github.com/ericyhkim/juga/pkg/resolver"
+	"github.com/ericyhkim/juga/pkg/service"
 
 	"github.com/spf13/cobra"
 )
@@ -48,47 +49,29 @@ The target can be a 6-digit code or a stock name (which will be auto-resolved).`
 		nick := args[0]
 		target := args[1]
 
-		aliasRepo := core.NewAliasRepository()
-		if err := aliasRepo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		code := target
-		resolutionSource := "code"
-
-		if !core.IsValidCode(target) {
-			if resolved := aliasRepo.Resolve(target); resolved != "" {
-				code = resolved
-				resolutionSource = fmt.Sprintf("existing alias '%s'", target)
+		res, err := deps.AliasService.SetAlias(nick, target)
+		if err != nil {
+			if errors.Is(err, service.ErrReservedName) {
+				deps.Logger.Error("Error: '%s' is a valid stock code and cannot be used as an alias.", nick)
+			} else if errors.Is(err, service.ErrInvalidTarget) {
+				deps.Logger.Error("Could not resolve '%s' to any stock.", target)
 			} else {
-				tickerRepo := core.NewTickerRepository()
-				if err := tickerRepo.Load(); err != nil {
-					fmt.Fprintf(os.Stderr, "Error loading tickers: %v\n", err)
-					os.Exit(1)
-				}
-
-				results := core.FindTickers(tickerRepo.GetAll(), target)
-				if len(results) == 0 {
-					fmt.Printf("Could not resolve '%s' to any stock.\n", target)
-					return
-				}
-
-				best := results[0]
-				code = best.Code
-				resolutionSource = fmt.Sprintf("stock name '%s' (%s)", best.Name, best.Code)
+				deps.Logger.Error("Error saving alias: %v", err)
 			}
+			return
 		}
 
-		if err := aliasRepo.Add(nick, code); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving alias: %v\n", err)
-			os.Exit(1)
-		}
-
-		if resolutionSource == "code" {
-			fmt.Printf("Alias set: %s -> %s (direct code)\n", nick, code)
-		} else {
-			fmt.Printf("Alias set: %s -> %s (resolved via %s)\n", nick, code, resolutionSource)
+		switch res.Source {
+		case resolver.SourceCode:
+			fmt.Printf("Alias set: %s -> %s (direct code)\n", res.Nickname, res.Code)
+		case resolver.SourceAlias:
+			fmt.Printf("Alias set: %s -> %s (chained via alias '%s')\n", res.Nickname, res.Code, target)
+		case resolver.SourceSearch:
+			fmt.Printf("Alias set: %s -> %s (resolved via name '%s')\n", res.Nickname, res.Code, res.Name)
+		default:
+			fmt.Printf("Alias set: %s -> %s\n", res.Nickname, res.Code)
 		}
 	},
 }
@@ -113,20 +96,15 @@ var aliasRemoveCmd = &cobra.Command{
 
 		nick := args[0]
 
-		repo := core.NewAliasRepository()
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		if repo.Resolve(nick) == "" {
-			fmt.Printf("Alias '%s' not found.\n", nick)
+		if err := deps.AliasService.RemoveAlias(nick); err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				fmt.Printf("Alias '%s' not found.\n", nick)
+			} else {
+				deps.Logger.Error("Error removing alias: %v", err)
+			}
 			return
-		}
-
-		if err := repo.Remove(nick); err != nil {
-			fmt.Fprintf(os.Stderr, "Error removing alias: %v\n", err)
-			os.Exit(1)
 		}
 
 		fmt.Printf("Alias '%s' removed.\n", nick)
@@ -138,19 +116,13 @@ var aliasListCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all registered aliases",
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := core.NewAliasRepository()
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
-
-		all := repo.GetAll()
+		deps := GetDeps(cmd)
+		all := deps.AliasService.ListAliases()
 		if len(all) == 0 {
 			fmt.Println("No aliases defined.")
 			return
 		}
 
-		// Sort keys for consistent output
 		keys := make([]string, 0, len(all))
 		for k := range all {
 			keys = append(keys, k)
@@ -176,13 +148,9 @@ var aliasEditCmd = &cobra.Command{
 	Long: `Opens all your aliases in the default editor ($EDITOR or nano/vi).
 Modify the mappings in 'nickname: code' format. Lines starting with # are ignored.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		repo := core.NewAliasRepository()
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading aliases: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		all := repo.GetAll()
+		all := deps.AliasService.ListAliases()
 		var keys []string
 		for k := range all {
 			keys = append(keys, k)
@@ -200,8 +168,8 @@ Modify the mappings in 'nickname: code' format. Lines starting with # are ignore
 
 		newContent, err := sys.OpenEditor(sb.String())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening editor: %v\n", err)
-			os.Exit(1)
+			deps.Logger.Error("Error opening editor: %v", err)
+			return
 		}
 
 		newAliases := make(map[string]string)
@@ -214,7 +182,7 @@ Modify the mappings in 'nickname: code' format. Lines starting with # are ignore
 
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
-				continue // Skip malformed lines
+				continue
 			}
 
 			nick := strings.TrimSpace(parts[0])
@@ -224,9 +192,9 @@ Modify the mappings in 'nickname: code' format. Lines starting with # are ignore
 			}
 		}
 
-		if err := repo.SetAll(newAliases); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving aliases: %v\n", err)
-			os.Exit(1)
+		if err := deps.AliasService.BulkUpdate(newAliases); err != nil {
+			deps.Logger.Error("Error saving aliases: %v", err)
+			return
 		}
 
 		fmt.Printf("Successfully updated %d aliases.\n", len(newAliases))

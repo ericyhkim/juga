@@ -1,4 +1,4 @@
-package core
+package storage
 
 import (
 	"bytes"
@@ -8,29 +8,29 @@ import (
 	"os"
 	"time"
 
-	"github.com/ericyhkim/juga/internal/config"
+	"github.com/ericyhkim/juga/pkg/diag"
+	"github.com/ericyhkim/juga/pkg/models"
 )
 
 //go:embed master_tickers.csv
 var defaultTickersCSV []byte
 
 type TickerRepository struct {
-	tickers []Ticker
+	filePath string
+	tickers  []models.Ticker
+	logger   diag.Logger
 }
 
-func NewTickerRepository() *TickerRepository {
+func NewTickerRepository(filePath string, logger diag.Logger) *TickerRepository {
 	return &TickerRepository{
-		tickers: []Ticker{},
+		filePath: filePath,
+		tickers:  []models.Ticker{},
+		logger:   logger,
 	}
 }
 
 func (r *TickerRepository) LastUpdated() (time.Time, error) {
-	path, err := config.GetMasterTickersPath()
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	info, err := os.Stat(path)
+	info, err := os.Stat(r.filePath)
 	if os.IsNotExist(err) {
 		return time.Time{}, nil
 	}
@@ -50,18 +50,13 @@ func (r *TickerRepository) IsFresh(d time.Duration) bool {
 }
 
 func (r *TickerRepository) Load() error {
-	path, err := config.GetMasterTickersPath()
-	if err != nil {
-		return err
-	}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.WriteFile(path, defaultTickersCSV, 0644); err != nil {
+	if _, err := os.Stat(r.filePath); os.IsNotExist(err) {
+		if err := os.WriteFile(r.filePath, defaultTickersCSV, 0644); err != nil {
 			return fmt.Errorf("failed to create default tickers file: %w", err)
 		}
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(r.filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open tickers file: %w", err)
 	}
@@ -73,12 +68,12 @@ func (r *TickerRepository) Load() error {
 		return fmt.Errorf("failed to parse tickers CSV: %w", err)
 	}
 
-	var loaded []Ticker
+	var loaded []models.Ticker
 	for _, record := range records {
 		if len(record) < 3 {
 			continue
 		}
-		loaded = append(loaded, Ticker{
+		loaded = append(loaded, models.Ticker{
 			Code:   record[0],
 			Name:   record[1],
 			Market: record[2],
@@ -90,12 +85,12 @@ func (r *TickerRepository) Load() error {
 		reader := csv.NewReader(bytes.NewReader(defaultTickersCSV))
 		embeddedRecords, err := reader.ReadAll()
 		if err == nil {
-			var embeddedLoaded []Ticker
+			var embeddedLoaded []models.Ticker
 			for _, record := range embeddedRecords {
 				if len(record) < 3 {
 					continue
 				}
-				embeddedLoaded = append(embeddedLoaded, Ticker{
+				embeddedLoaded = append(embeddedLoaded, models.Ticker{
 					Code:   record[0],
 					Name:   record[1],
 					Market: record[2],
@@ -105,7 +100,7 @@ func (r *TickerRepository) Load() error {
 			if len(embeddedLoaded) > len(loaded) {
 				loaded = embeddedLoaded
 				if saveErr := r.Save(loaded); saveErr != nil {
-					fmt.Fprintf(os.Stderr, "Warning: failed to update local tickers: %v\n", saveErr)
+					r.logger.Warn("Warning: failed to update local tickers: %v\n", saveErr)
 				}
 			}
 		}
@@ -115,13 +110,8 @@ func (r *TickerRepository) Load() error {
 	return nil
 }
 
-func (r *TickerRepository) Save(tickers []Ticker) error {
-	path, err := config.GetMasterTickersPath()
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(path)
+func (r *TickerRepository) Save(tickers []models.Ticker) error {
+	f, err := os.Create(r.filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create tickers file: %w", err)
 	}
@@ -140,7 +130,7 @@ func (r *TickerRepository) Save(tickers []Ticker) error {
 	return nil
 }
 
-func (r *TickerRepository) GetAll() []Ticker {
+func (r *TickerRepository) GetAll() []models.Ticker {
 	return r.tickers
 }
 

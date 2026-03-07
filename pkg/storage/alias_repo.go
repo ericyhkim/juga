@@ -1,30 +1,29 @@
-package core
+package storage
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
-	"github.com/ericyhkim/juga/internal/config"
+	"github.com/ericyhkim/juga/pkg/diag"
 )
 
 type AliasRepository struct {
-	aliases map[string]string
+	filePath string
+	aliases  map[string]string
+	logger   diag.Logger
 }
 
-func NewAliasRepository() *AliasRepository {
+func NewAliasRepository(filePath string, logger diag.Logger) *AliasRepository {
 	return &AliasRepository{
-		aliases: make(map[string]string),
+		filePath: filePath,
+		aliases:  make(map[string]string),
+		logger:   logger,
 	}
 }
 
 func (r *AliasRepository) Load() error {
-	path, err := config.GetAliasesPath()
-	if err != nil {
-		return err
-	}
-
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(r.filePath)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -44,17 +43,12 @@ func (r *AliasRepository) Load() error {
 }
 
 func (r *AliasRepository) Save() error {
-	path, err := config.GetAliasesPath()
-	if err != nil {
-		return err
-	}
-
 	data, err := json.MarshalIndent(r.aliases, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal aliases: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(r.filePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write aliases file: %w", err)
 	}
 	return nil

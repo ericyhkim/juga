@@ -2,9 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/ericyhkim/juga/internal/core"
 	"github.com/ericyhkim/juga/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -35,13 +33,13 @@ Example:
 
 		query := args[0]
 
-		repo := core.NewTickerRepository()
-		if err := repo.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading ticker database: %v\n", err)
-			os.Exit(1)
-		}
+		deps := GetDeps(cmd)
 
-		results := core.FindTickers(repo.GetAll(), query)
+		results, err := deps.StockService.SearchTickers(query)
+		if err != nil {
+			deps.Logger.Error("Error searching tickers: %v", err)
+			return
+		}
 
 		if len(results) == 0 {
 			fmt.Printf("No matches found for '%s'.\n", query)

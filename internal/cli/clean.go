@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/ericyhkim/juga/internal/config"
-
-	"github.com/spf13/cobra"
-)
+		"fmt"
+		"os"
+	
+		"github.com/ericyhkim/juga/pkg/config"
+		"github.com/spf13/cobra"
+	)
+	
 
 var cleanCmd = &cobra.Command{
 	Use:   "clean",
