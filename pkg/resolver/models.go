@@ -32,7 +32,6 @@ type ResolutionResult struct {
 	Status      ResolutionStatus
 	IsAmbiguous bool
 	Candidates  []models.Ticker
-	Trace       string
 	Error       error
 }
 

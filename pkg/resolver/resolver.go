@@ -80,7 +80,6 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 				Code:   resolved,
 				Source: SourceAlias,
 				Status: StatusSuccess,
-				Trace:  fmt.Sprintf("[%s] %s → %s", models.PrefixAlias, nick, resolved),
 			}
 		}
 		return ResolutionResult{
@@ -98,7 +97,6 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 				Code:   code,
 				Source: SourceCode,
 				Status: StatusSuccess,
-				Trace:  fmt.Sprintf("[%s] %s", models.PrefixCode, code),
 			}
 		}
 		return ResolutionResult{
@@ -119,7 +117,6 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 			Code:   resolved,
 			Source: SourceAlias,
 			Status: StatusSuccess,
-			Trace:  fmt.Sprintf("[Alias] %s → %s", input, resolved),
 		}
 	}
 
@@ -129,7 +126,6 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 			Code:   input,
 			Source: SourceCode,
 			Status: StatusSuccess,
-			Trace:  fmt.Sprintf("[Code] %s", input),
 		}
 	}
 
@@ -139,7 +135,6 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 			Code:   cached,
 			Source: SourceCache,
 			Status: StatusSuccess,
-			Trace:  fmt.Sprintf("[Cache] %s → %s", input, cached),
 		}
 	}
 
@@ -157,10 +152,7 @@ func (r *Resolver) resolveSearch(input, query string, isExplicit bool) Resolutio
 	if len(results) > 0 {
 		bestMatch := results[0]
 
-		prefix := "Search"
-		if isExplicit {
-			prefix = models.PrefixSearch
-		} else {
+		if !isExplicit {
 			r.cache.Set(input, bestMatch.Code)
 		}
 
@@ -174,7 +166,6 @@ func (r *Resolver) resolveSearch(input, query string, isExplicit bool) Resolutio
 			Status:      StatusSuccess,
 			IsAmbiguous: isAmbiguous,
 			Candidates:  results,
-			Trace:       fmt.Sprintf("[%s] %s → %s (%s)", prefix, query, bestMatch.Code, bestMatch.Name),
 		}
 	}
 

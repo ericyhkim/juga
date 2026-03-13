@@ -3,12 +3,10 @@ package cli
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/ericyhkim/juga/internal/ui"
 	"github.com/ericyhkim/juga/pkg/config"
 	"github.com/ericyhkim/juga/pkg/diag"
-	"github.com/ericyhkim/juga/pkg/models"
 	"github.com/ericyhkim/juga/pkg/resolver"
 
 	"github.com/spf13/cobra"
@@ -84,12 +82,6 @@ Example:
 							res.Code = c.Code
 							res.Name = c.Name
 							res.IsAmbiguous = false
-							
-							prefix := "Search"
-							if strings.HasPrefix(res.Input, models.PrefixSearch) {
-								prefix = models.PrefixSearch
-							}
-							res.Trace = fmt.Sprintf("[%s] %s → %s (%s)", prefix, strings.TrimPrefix(res.Input, models.PrefixSearch), res.Code, res.Name)
 							break
 						}
 					}
@@ -99,9 +91,7 @@ Example:
 		}
 
 		for _, res := range finalResults {
-			if res.Status == resolver.StatusSuccess && res.Trace != "" {
-				fmt.Println(ui.StyleNameInactive.Render(res.Trace))
-			} else if res.Status == resolver.StatusNotFound {
+			if res.Status == resolver.StatusNotFound {
 				fmt.Printf("⚠️  Could not find stock for '%s'\n", res.Input)
 			}
 		}
@@ -123,7 +113,6 @@ Example:
 		presenter := ui.NewPresenter()
 		stockVMs := presenter.PrepareList(fetchRes.Stocks)
 
-		fmt.Println("") 
 		fmt.Println(ui.RenderStockTable(stockVMs))
 
 		if fetchRes.IsTruncated {
