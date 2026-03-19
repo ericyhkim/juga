@@ -27,3 +27,7 @@ var marketCmd = &cobra.Command{
 		fmt.Println(ui.RenderMarketDetails(marketVMs))
 	},
 }
+
+func init() {
+	rootCmd.AddCommand(marketCmd)
+}
