@@ -7,7 +7,8 @@ It’s a simple terminal tool letting you check KOSPI/KOSDAQ market data instant
 
 ## ⚡️ Why use it?
 - **Simple:** No API keys, no heavy setup. Just a single binary.
-- **Smart Search:** Type `juga 삼전` instead of memorizing `005930`.
+- **Smart Search:** Type `juga 삼전` instead of memorizing `005930`. If multiple matches are found, an **interactive picker** lets you choose the right one.
+- **Deterministic Prefixes:** Force specific resolution modes using symbols (`@`, `:`, `#`, `/`) for total control.
 - **Clean Output:** Shows only what matters—price and change—without the clutter.
 - **Mix & Match:** Fetch multiple stocks at once using any combination of names, codes, or aliases.
 
@@ -73,26 +74,23 @@ Delete `juga.exe` and the following directories:
 # 1. Mix names, codes, and aliases freely
 juga sam 005380 SK하이닉스
 
-# 2. Find a stock code if you're unsure
+# 2. Use deterministic prefixes for precision
+juga @my-portfolio  # Force Portfolio
+juga :sam           # Force Alias
+juga #005930         # Force Stock Code
+juga /카카오        # Force Fuzzy Search (with interactive picker)
+
+# 3. Find a stock code if you're unsure
 juga find 삼전
 
-# 3. Set an alias
+# 4. Set an alias
 juga alias set sam 005380
-
-# 4. Use your alias anytime
-juga sam
-
-# 5. Create a portfolio
-juga portfolio set my-tech sam NAVER 005380
-
-# 6. Check your portfolio with one command
-juga my-tech
 ```
 
 ## 💻 Commands
 | Command | Shorthand | Description |
 | :--- | :--- | :--- |
-| `juga [names...]` | - | **The Quick Peek.** Fetches real-time price & change for stocks, aliases, or portfolios. |
+| `juga [names...]` | - | **The Quick Peek.** Fetches real-time price & change. Supports prefixes (`@`, `:`, `#`, `/`). |
 | `juga alias set <nick> <tgt>` | `a set` | Links a nickname to a 6-digit code or name. |
 | `juga alias edit` | `a edit`, `a e` | Opens all aliases in your text editor. |
 | `juga alias list` | `a list`, `a ls` | Displays all your currently saved shortcuts. |
@@ -108,7 +106,7 @@ juga my-tech
 ## 🛠 Tech Spec
 - **Language:** Go (Golang)
 - **CLI Framework:** `spf13/cobra`
-- **UI/Styling:** `charmbracelet/lipgloss`
+- **UI/Styling:** `charmbracelet/lipgloss`, `charmbracelet/huh` (Interactive Picker)
 - **Fuzzy Matching:** `sahilm/fuzzy`
 - **Data Source:** Naver Finance Real-time Polling API (JSON).
 
@@ -125,11 +123,12 @@ juga my-tech
 > **Note:** On Windows, these default to `%APPDATA%\juga` (Config) and `%LOCALAPPDATA%\juga` (Data/Cache).
 
 - **Resolver Logic**:
-  1. Check if the input is a **Portfolio** (expands to list of items).
-  2. Check `aliases.json` for an exact match.
-  3. Check if the input is a valid 6-digit stock code.
-  4. Fuzzy Search `master_tickers.csv` for a name match.
-  5. Fetch data.
+  1. **Prefix Check**: If input starts with a prefix (`@`, `:`, `#`, `/`), force that specific resolution mode.
+  2. **Portfolio Check**: If no prefix, check if the input is a saved Portfolio.
+  3. **Alias Check**: Check `aliases.json` for an exact match.
+  4. **Code Check**: Check if the input is a valid 6-digit stock code.
+  5. **Fuzzy Search**: Search `master_tickers.csv`. If multiple matches exist, show an **interactive picker**.
+  6. **Fetch Data**.
 
 ## 🎨 Demo
 
