@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ericyhkim/juga/pkg/diag"
 	"github.com/ericyhkim/juga/pkg/models"
@@ -35,6 +36,15 @@ func NewResolver(
 func (r *Resolver) ResolveAll(inputs []string) []ResolutionResult {
 	var expandedInputs []string
 	for _, input := range inputs {
+		if strings.HasPrefix(input, models.PrefixPortfolio) {
+			name := strings.TrimPrefix(input, models.PrefixPortfolio)
+			if items, ok := r.portfolios.Get(name); ok {
+				expandedInputs = append(expandedInputs, items...)
+				continue
+			}
+		}
+
+		// Fallback to legacy behavior: check if it's a portfolio without prefix
 		if items, ok := r.portfolios.Get(input); ok {
 			expandedInputs = append(expandedInputs, items...)
 		} else {
@@ -47,14 +57,14 @@ func (r *Resolver) ResolveAll(inputs []string) []ResolutionResult {
 
 	for _, input := range expandedInputs {
 		res := r.Resolve(input)
-		
+
 		if res.Status == StatusSuccess {
 			if seen[res.Code] {
 				continue
 			}
 			seen[res.Code] = true
 		}
-		
+
 		results = append(results, res)
 	}
 
@@ -62,6 +72,45 @@ func (r *Resolver) ResolveAll(inputs []string) []ResolutionResult {
 }
 
 func (r *Resolver) Resolve(input string) ResolutionResult {
+	if strings.HasPrefix(input, models.PrefixAlias) {
+		nick := strings.TrimPrefix(input, models.PrefixAlias)
+		if resolved := r.aliases.Resolve(nick); resolved != "" {
+			return ResolutionResult{
+				Input:  input,
+				Code:   resolved,
+				Source: SourceAlias,
+				Status: StatusSuccess,
+			}
+		}
+		return ResolutionResult{
+			Input:  input,
+			Status: StatusNotFound,
+			Error:  fmt.Errorf("%w: alias '%s'", ErrNotFound, nick),
+		}
+	}
+
+	if strings.HasPrefix(input, models.PrefixCode) {
+		code := strings.TrimPrefix(input, models.PrefixCode)
+		if models.IsValidCode(code) {
+			return ResolutionResult{
+				Input:  input,
+				Code:   code,
+				Source: SourceCode,
+				Status: StatusSuccess,
+			}
+		}
+		return ResolutionResult{
+			Input:  input,
+			Status: StatusNotFound,
+			Error:  fmt.Errorf("invalid stock code: %s", code),
+		}
+	}
+
+	if strings.HasPrefix(input, models.PrefixSearch) {
+		query := strings.TrimPrefix(input, models.PrefixSearch)
+		return r.resolveSearch(input, query, true)
+	}
+
 	if resolved := r.aliases.Resolve(input); resolved != "" {
 		return ResolutionResult{
 			Input:  input,
@@ -89,30 +138,40 @@ func (r *Resolver) Resolve(input string) ResolutionResult {
 		}
 	}
 
+	return r.resolveSearch(input, input, false)
+}
+
+func (r *Resolver) resolveSearch(input, query string, isExplicit bool) ResolutionResult {
 	if r.tickers.Count() == 0 {
 		if err := r.tickers.Load(); err != nil {
 			r.logger.Error("Failed to load ticker list: %v", err)
 		}
 	}
 
-	results := search.FindTickers(r.tickers.GetAll(), input)
+	results := search.FindTickers(r.tickers.GetAll(), query)
 	if len(results) > 0 {
 		bestMatch := results[0]
-		
-		r.cache.Set(input, bestMatch.Code)
-		
+
+		if !isExplicit {
+			r.cache.Set(input, bestMatch.Code)
+		}
+
+		isAmbiguous := len(results) > 1
+
 		return ResolutionResult{
-			Input:  input,
-			Code:   bestMatch.Code,
-			Name:   bestMatch.Name,
-			Source: SourceSearch,
-			Status: StatusSuccess,
+			Input:       input,
+			Code:        bestMatch.Code,
+			Name:        bestMatch.Name,
+			Source:      SourceSearch,
+			Status:      StatusSuccess,
+			IsAmbiguous: isAmbiguous,
+			Candidates:  results,
 		}
 	}
 
 	return ResolutionResult{
 		Input:  input,
 		Status: StatusNotFound,
-		Error:  fmt.Errorf("%w: %s", ErrNotFound, input),
+		Error:  fmt.Errorf("%w: %s", ErrNotFound, query),
 	}
 }

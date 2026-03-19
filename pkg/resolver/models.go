@@ -1,8 +1,11 @@
 package resolver
 
-import "errors"
+import (
+	"errors"
 
-// ResolutionSource indicates how a stock code was found.
+	"github.com/ericyhkim/juga/pkg/models"
+)
+
 type ResolutionSource string
 
 const (
@@ -13,7 +16,6 @@ const (
 	SourceNone   ResolutionSource = "None"
 )
 
-// ResolutionStatus represents the outcome of a resolution attempt.
 type ResolutionStatus string
 
 const (
@@ -23,15 +25,16 @@ const (
 )
 
 type ResolutionResult struct {
-	Input  string
-	Code   string
-	Name   string
-	Source ResolutionSource
-	Status ResolutionStatus
-	Error  error
+	Input       string
+	Code        string
+	Name        string
+	Source      ResolutionSource
+	Status      ResolutionStatus
+	IsAmbiguous bool
+	Candidates  []models.Ticker
+	Error       error
 }
 
-// Common errors for programmatic checking
 var (
 	ErrNotFound = errors.New("stock not found")
 )

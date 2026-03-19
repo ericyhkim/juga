@@ -26,3 +26,7 @@ Process takes about 10-20 seconds.`,
 		fmt.Printf("✅ Successfully updated %d tickers.\n", res.Count)
 	},
 }
+
+func init() {
+	rootCmd.AddCommand(updateCmd)
+}

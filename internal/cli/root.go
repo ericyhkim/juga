@@ -23,9 +23,15 @@ var rootCmd = &cobra.Command{
 A simple terminal tool that bypasses complex APIs and official codes,
 letting you check KOSPI/KOSDAQ market data instantly using aliases and fuzzy search.
 
+Deterministic Prefixes:
+  @<name>   - Force Portfolio resolution
+  :<name>   - Force Alias resolution
+  #<code>   - Force Stock Code resolution
+  /<query>  - Force Fuzzy Search (bypasses cache/aliases)
+
 Example:
-  juga 삼성전자 kakao
-  juga 005930`,
+  juga 삼성전자 :sam #005930 @my-tech
+  juga /카카오`,
 	Args: cobra.ArbitraryArgs,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		logger := diag.NewStdLogger()
@@ -43,9 +49,10 @@ Example:
 				Usage:       "juga <stock_name_or_code> [more_stocks...]",
 				Examples: []string{
 					"juga 삼성전자       # Check price by name",
-					"juga 005930         # Check price by code",
-					"juga find 카카오    # Find a stock code",
-					"juga market         # Check KOSPI/KOSDAQ",
+					"juga :sam           # Force alias 'sam'",
+					"juga #005930         # Force code '005930'",
+					"juga /카카오        # Search with picker",
+					"juga @tech          # Force portfolio 'tech'",
 				},
 				Tip: "Run 'juga help' for the full list of commands.",
 			}))
@@ -56,7 +63,34 @@ Example:
 
 		results := deps.Resolver.ResolveAll(args)
 
+		finalResults := make([]resolver.ResolutionResult, 0, len(results))
 		for _, res := range results {
+			if res.IsAmbiguous {
+				listItems := make([]ui.ListItem, 0, len(res.Candidates))
+				for _, c := range res.Candidates {
+					listItems = append(listItems, ui.ListItem{
+						Key:   c.Name,
+						Value: c.Code,
+					})
+				}
+
+				title := fmt.Sprintf("Multiple matches for '%s'. Select one:", res.Input)
+				selectedCode, err := ui.RunPicker(title, listItems)
+				if err == nil {
+					for _, c := range res.Candidates {
+						if c.Code == selectedCode {
+							res.Code = c.Code
+							res.Name = c.Name
+							res.IsAmbiguous = false
+							break
+						}
+					}
+				}
+			}
+			finalResults = append(finalResults, res)
+		}
+
+		for _, res := range finalResults {
 			if res.Status == resolver.StatusNotFound {
 				fmt.Printf("⚠️  Could not find stock for '%s'\n", res.Input)
 			}
@@ -66,7 +100,7 @@ Example:
 			deps.Logger.Error("Failed to save cache: %v", cacheErr)
 		}
 
-		fetchRes, err := deps.StockService.FetchStocks(results)
+		fetchRes, err := deps.StockService.FetchStocks(finalResults)
 		if err != nil {
 			deps.Logger.Error("Error fetching data: %v", err)
 			return
@@ -96,8 +130,4 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.AddCommand(marketCmd)
 }

@@ -2,6 +2,13 @@ package models
 
 const StockCodeLength = 6
 
+const (
+	PrefixPortfolio = "@"
+	PrefixAlias     = ":"
+	PrefixCode      = "#"
+	PrefixSearch    = "/"
+)
+
 type Stock struct {
 	Code          string
 	Name          string
